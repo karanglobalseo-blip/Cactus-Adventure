@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Local Game Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        .button { 
+            display: inline-block; 
+            padding: 15px 30px; 
+            margin: 10px; 
+            background: #4CAF50; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-size: 18px;
+        }
+        .button:hover { background: #45a049; }
+        .info { background: #f0f0f0; padding: 20px; margin: 20px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🌵 Cactus Quest - Local Server 🌵</h1>
+    
+    <div class="info">
+        <h3>To play the game locally:</h3>
+        <p>1. <strong>Option 1:</strong> Click the button below to open the game directly</p>
+        <a href="index.html" class="button">🎮 Play Game Locally</a>
+        
+        <p>2. <strong>Option 2:</strong> Use a local server (recommended)</p>
+        <p>Open Command Prompt in this folder and run:</p>
+        <code>python -m http.server 8000</code>
+        <p>Then go to: <a href="http://localhost:8000">http://localhost:8000</a></p>
+        
+        <p>3. <strong>Option 3:</strong> Use Live Server extension in VS Code</p>
+        <p>Right-click index.html → "Open with Live Server"</p>
+    </div>
+    
+    <div class="info">
+        <h3>⚠️ Important:</h3>
+        <p>Make sure you're running the game from your local files, not from GitHub Pages!</p>
+        <p>The URL should be <code>file://</code> or <code>localhost</code>, not <code>github.io</code></p>
+    </div>
+    
+    <script>
+        // Check if we're on GitHub Pages and warn user
+        if (window.location.hostname.includes('github.io')) {
+            alert('⚠️ You are viewing this from GitHub Pages!\n\nTo test your latest changes, please:\n1. Download/clone the repository\n2. Open index.html locally\n3. Or run a local server');
+        }
+    </script>
+</body>
+</html>

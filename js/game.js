@@ -504,7 +504,15 @@ class Game {
         this.thorns.forEach(thorn => {
             this.enemies.forEach(creature => {
                 if (thorn.active && creature.active && this.checkCollision(thorn, creature)) {
-                    creature.befriend();
+                    // Safety check for befriend method
+                    if (typeof creature.befriend === 'function') {
+                        creature.befriend();
+                    } else {
+                        // Fallback for creatures without befriend method
+                        creature.active = false;
+                        console.warn('Creature missing befriend method:', creature.constructor.name);
+                    }
+                    
                     thorn.active = false;
                     this.audioManager.play('friendship');
                     this.achievementManager.onCreatureBefriended();
