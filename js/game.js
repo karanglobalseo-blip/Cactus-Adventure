@@ -53,6 +53,10 @@ class Game {
         this.achievementManager = null;
         this.effectsManager = null;
         
+        // Performance tracking
+        this.frameCount = 0;
+        this.lastPerformanceCheck = 0;
+        
         this.init();
     }
     
@@ -198,51 +202,71 @@ class Game {
     }
 
     generateMoreContent(fromX, toX) {
-        // Additional flowers
-        for (let i = 0; i < 20; i++) {
-            this.flowers.push({
-                x: fromX + Math.random() * (toX - fromX),
-                y: this.height - 100 - Math.random() * 200,
-                width: 20,
-                height: 20,
-                collected: false,
-                type: Math.random() > 0.85 ? 'super' : 'normal'
-            });
-        }
-        // Additional bricks
-        for (let i = 0; i < 6; i++) {
-            this.bricks.push({
-                x: fromX + 200 + i * 180 + Math.random() * 120,
-                y: this.height - 220 - Math.random() * 60,
-                width: 40,
-                height: 20,
-                hit: false
-            });
-        }
-        // Additional camels (more with higher difficulty)
-        const camelCount = Math.min(3 + Math.floor(this.difficultyLevel / 3), 6);
-        for (let i = 0; i < camelCount; i++) {
-            const camel = new Camel(fromX + 300 + i * 300, this.height - 120, this);
-            // Increase camel speed with difficulty
-            camel.speed *= (1 + this.difficultyLevel * 0.1);
-            this.enemies.push(camel);
-        }
-        // Occasionally spawn power-ups
-        if (Math.random() < 0.3) {
-            const powerUpX = fromX + Math.random() * (toX - fromX);
-            const powerUpY = this.height - 120 - Math.random() * 100;
-            this.powerUpManager.addPowerUp(powerUpX, powerUpY, 
-                ['speed', 'shield', 'multiThorn', 'jumpBoost'][Math.floor(Math.random() * 4)]);
-        }
-        // Add sand storms periodically (more frequent with difficulty)
-        const chunkId = Math.floor(fromX / (this.width * 5));
-        const stormFreq = Math.max(1, 4 - Math.floor(this.difficultyLevel / 2));
-        if (chunkId % stormFreq === 1) {
-            const stormX = fromX + Math.random() * (toX - fromX - 200);
-            const storm = new SandStorm(stormX, 0, this.height, this);
-            // Increase storm speed with difficulty
-            storm.vx *= (1 + this.difficultyLevel * 0.15);
-            this.environment.sandStorms.push(storm);
+        try {
+            // Additional flowers
+            for (let i = 0; i < 20; i++) {
+                this.flowers.push({
+                    x: fromX + Math.random() * (toX - fromX),
+                    y: this.height - 100 - Math.random() * 200,
+                    width: 20,
+                    height: 20,
+                    collected: false,
+                    type: Math.random() > 0.85 ? 'super' : 'normal'
+                });
+            }
+            
+            // Additional bricks
+            for (let i = 0; i < 6; i++) {
+                this.bricks.push({
+                    x: fromX + 200 + i * 180 + Math.random() * 120,
+                    y: this.height - 220 - Math.random() * 60,
+                    width: 40,
+                    height: 20,
+                    hit: false
+                });
+            }
+            
+            // Additional camels (more with higher difficulty)
+            const camelCount = Math.min(3 + Math.floor(this.difficultyLevel / 3), 6);
+            for (let i = 0; i < camelCount; i++) {
+                try {
+                    const camel = new Camel(fromX + 300 + i * 300, this.height - 120, this);
+                    // Increase camel speed with difficulty
+                    if (camel.speed) {
+                        camel.speed *= (1 + this.difficultyLevel * 0.1);
+                    }
+                    this.enemies.push(camel);
+                } catch (e) {
+                    console.warn('Failed to create camel:', e);
+                }
+            }
+            
+            // Occasionally spawn power-ups
+            if (Math.random() < 0.3) {
+                const powerUpX = fromX + Math.random() * (toX - fromX);
+                const powerUpY = this.height - 120 - Math.random() * 100;
+                this.powerUpManager.addPowerUp(powerUpX, powerUpY, 
+                    ['speed', 'shield', 'multiThorn', 'jumpBoost'][Math.floor(Math.random() * 4)]);
+            }
+            
+            // Add sand storms periodically (more frequent with difficulty)
+            const chunkId = Math.floor(fromX / (this.width * 5));
+            const stormFreq = Math.max(1, 4 - Math.floor(this.difficultyLevel / 2));
+            if (chunkId % stormFreq === 1) {
+                try {
+                    const stormX = fromX + Math.random() * (toX - fromX - 200);
+                    const storm = new SandStorm(stormX, 0, this.height, this);
+                    // Increase storm speed with difficulty
+                    if (storm.vx !== undefined) {
+                        storm.vx *= (1 + this.difficultyLevel * 0.15);
+                    }
+                    this.environment.sandStorms.push(storm);
+                } catch (e) {
+                    console.warn('Failed to create sandstorm:', e);
+                }
+            }
+        } catch (error) {
+            console.error('Error in generateMoreContent:', error);
         }
     }
     
@@ -301,6 +325,9 @@ class Game {
             }
         });
         
+        // Clean up inactive enemies
+        this.enemies = this.enemies.filter(enemy => enemy.active);
+        
         // Update thorns
         this.thorns.forEach(thorn => thorn.update(deltaTime));
         this.thorns = this.thorns.filter(thorn => thorn.active);
@@ -308,6 +335,11 @@ class Game {
         // Update particles
         this.particles.forEach(particle => particle.update(deltaTime));
         this.particles = this.particles.filter(particle => particle.active);
+        
+        // Limit particle count to prevent memory issues
+        if (this.particles.length > 200) {
+            this.particles = this.particles.slice(-100);
+        }
 
         // Update flower physics (jump/fall for dynamic flowers)
         this.flowers.forEach(f => {
@@ -319,6 +351,11 @@ class Game {
                 if (f.y > groundY) { f.y = groundY; f.vy = 0; f.dynamic = false; }
             }
         });
+        
+        // Clean up old collected flowers to prevent memory leaks
+        if (this.flowers.length > 500) {
+            this.flowers = this.flowers.filter(f => !f.collected || f.x > this.player.x - this.width);
+        }
 
         // Update environment
         this.environment.update(deltaTime);
@@ -334,6 +371,9 @@ class Game {
             const oldWidth = this.worldWidth;
             this.worldWidth += this.width * 5; // extend by 5 screens
             this.generateMoreContent(oldWidth, this.worldWidth);
+            
+            // Clean up old objects that are far behind the player
+            this.cleanupOldObjects();
         }
         
         // Check win/lose conditions
@@ -425,12 +465,54 @@ class Game {
         
         if (newDifficultyLevel > this.difficultyLevel) {
             this.difficultyLevel = newDifficultyLevel;
-            this.ui.showAlert(
-                `🔥 Difficulty Increased! Level ${this.difficultyLevel}`,
-                'rgba(255, 100, 0, 0.9)',
-                3000
-            );
+            try {
+                if (this.ui) {
+                    this.ui.showAlert(
+                        `🔥 Difficulty Increased! Level ${this.difficultyLevel}`,
+                        'rgba(255, 100, 0, 0.9)',
+                        3000
+                    );
+                }
+            } catch (e) {
+                console.warn('Failed to show difficulty alert:', e);
+            }
         }
+    }
+    
+    performanceCheck() {
+        const objectCount = this.flowers.length + this.enemies.length + this.particles.length + this.bricks.length;
+        if (objectCount > 1000) {
+            console.warn('High object count detected:', objectCount, 'forcing cleanup');
+            this.cleanupOldObjects();
+        }
+    }
+    
+    cleanupOldObjects() {
+        const cleanupDistance = this.player.x - this.width * 3;
+        
+        // Remove old flowers
+        this.flowers = this.flowers.filter(f => f.x > cleanupDistance || !f.collected);
+        
+        // Remove old bricks
+        this.bricks = this.bricks.filter(b => b.x > cleanupDistance);
+        
+        // Remove old enemies
+        this.enemies = this.enemies.filter(e => e.x > cleanupDistance || e.active);
+        
+        // Clean up old sandstorms
+        if (this.environment && this.environment.sandStorms) {
+            this.environment.sandStorms = this.environment.sandStorms.filter(s => s.x > cleanupDistance);
+        }
+        
+        // Clean up old particles
+        this.particles = this.particles.filter(p => p.x > cleanupDistance);
+        
+        console.log('Cleanup completed. Objects remaining:', {
+            flowers: this.flowers.length,
+            enemies: this.enemies.length,
+            particles: this.particles.length,
+            bricks: this.bricks.length
+        });
     }
     
     checkGameState() {
@@ -649,11 +731,25 @@ class Game {
     }
     
     gameLoop(currentTime = 0) {
-        this.deltaTime = currentTime - this.lastTime;
-        this.lastTime = currentTime;
-        
-        this.update(this.deltaTime);
-        this.render();
+        try {
+            this.deltaTime = currentTime - this.lastTime;
+            this.lastTime = currentTime;
+            
+            // Cap deltaTime to prevent issues with large frame gaps
+            this.deltaTime = Math.min(this.deltaTime, 50);
+            
+            this.update(this.deltaTime);
+            this.render();
+            
+            // Performance monitoring
+            if (this.frameCount % 300 === 0) { // Every 5 seconds at 60fps
+                this.performanceCheck();
+            }
+            this.frameCount = (this.frameCount || 0) + 1;
+            
+        } catch (error) {
+            console.error('Game loop error:', error);
+        }
         
         requestAnimationFrame((time) => this.gameLoop(time));
     }
