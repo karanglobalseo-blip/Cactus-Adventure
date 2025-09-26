@@ -206,6 +206,12 @@ class Game {
         for (let i = 0; i < 3; i++) {
             this.enemies.push(new Camel(fromX + 300 + i * 400, this.height - 120, this));
         }
+        // Add sand storms periodically (every few chunks)
+        const chunkId = Math.floor(fromX / (this.width * 5));
+        if (chunkId % 3 === 1) { // spawn storm every 3rd chunk
+            const stormX = fromX + Math.random() * (toX - fromX - 200);
+            this.environment.sandStorms.push(new SandStorm(stormX, 0, this.height, this));
+        }
     }
     
     generateEnemies() {
