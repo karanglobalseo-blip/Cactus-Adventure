@@ -41,11 +41,11 @@ class AudioManager {
         // Super flower sound
         this.sounds.superFlower = () => this.playChord([523, 659, 784, 1047], 0.3);
         
-        // Enemy hit sound
-        this.sounds.enemyHit = () => this.playTone(150, 0.2, 'square');
+        // Friendship sound
+        this.sounds.friendship = () => this.playChord([523, 659, 784], 0.3);
         
-        // Player damage sound
-        this.sounds.damage = () => this.playTone(100, 0.3, 'sawtooth');
+        // Tired sound
+        this.sounds.tired = () => this.playTone(200, 0.2, 'sine');
         
         // Plant power sound
         this.sounds.plant = () => this.playTone(300, 0.4, 'sine');
@@ -58,6 +58,18 @@ class AudioManager {
         
         // Power-up collect sound
         this.sounds.powerup = () => this.playArpeggio([262, 330, 392, 523], 0.1);
+        
+        // New creature sounds
+        this.sounds.creatureCall = () => this.playTone(300, 0.2, 'triangle');
+        this.sounds.birdSong = () => this.playArpeggio([600, 700, 800], 0.1);
+        this.sounds.gentleRumble = () => this.playTone(80, 0.4, 'sine');
+        this.sounds.natureSound = () => this.playTone(200, 0.3, 'triangle');
+        
+        // Guardian sounds
+        this.sounds.guardianAppear = () => this.playChord([200, 300, 400], 0.6);
+        this.sounds.guardianFriendly = () => this.playArpeggio([400, 500, 600, 700, 800], 0.2);
+        this.sounds.windWhisper = () => this.playTone(250, 0.5, 'sine');
+        this.sounds.biomeTransition = () => this.playChord([500, 600, 700], 0.6);
     }
     
     loadAudioFiles() {

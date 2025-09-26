@@ -15,8 +15,24 @@ class Environment {
         this.cloudOffset = 0;
         this.sandDuneOffset = 0;
         
+        // Biome colors (default to desert)
+        this.biomeColors = {
+            sky: ['#87CEEB', '#F4D03F', '#DAA520'],
+            ground: ['#DAA520', '#CD853F'],
+            accent: '#F4A460'
+        };
+        
         this.generateShelters();
         this.generateBackgroundElements();
+    }
+    
+    setBiome(biome) {
+        this.biomeColors = {
+            sky: biome.colors.sky,
+            ground: [biome.colors.ground, biome.colors.accent],
+            accent: biome.colors.accent
+        };
+        console.log('Environment updated to', biome.name, 'biome');
     }
     
     generateShelters() {
@@ -154,19 +170,19 @@ class Environment {
     }
     
     renderBackground(ctx) {
-        // Sky gradient
+        // Sky gradient using biome colors
         const skyGradient = ctx.createLinearGradient(0, 0, 0, this.game.height * 0.7);
-        skyGradient.addColorStop(0, '#87CEEB');
-        skyGradient.addColorStop(0.7, '#F4D03F');
-        skyGradient.addColorStop(1, '#DAA520');
+        skyGradient.addColorStop(0, this.biomeColors.sky[0]);
+        skyGradient.addColorStop(0.5, this.biomeColors.sky[1]);
+        skyGradient.addColorStop(1, this.biomeColors.sky[2]);
         
         ctx.fillStyle = skyGradient;
         ctx.fillRect(0, 0, this.game.worldWidth, this.game.height * 0.7);
         
-        // Ground
+        // Ground using biome colors
         const groundGradient = ctx.createLinearGradient(0, this.game.height * 0.7, 0, this.game.height);
-        groundGradient.addColorStop(0, '#DAA520');
-        groundGradient.addColorStop(1, '#CD853F');
+        groundGradient.addColorStop(0, this.biomeColors.ground[0]);
+        groundGradient.addColorStop(1, this.biomeColors.ground[1]);
         
         ctx.fillStyle = groundGradient;
         ctx.fillRect(0, this.game.height * 0.7, this.game.worldWidth, this.game.height * 0.3);
@@ -225,7 +241,7 @@ class Environment {
     }
     
     renderSandDunes(ctx) {
-        ctx.fillStyle = '#F4A460';
+        ctx.fillStyle = this.biomeColors.accent;
         
         // Animated sand dunes in background
         for (let i = 0; i < 6; i++) {

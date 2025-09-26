@@ -52,6 +52,11 @@ class Game {
         this.powerUpManager = null;
         this.achievementManager = null;
         this.effectsManager = null;
+        this.biomeManager = null;
+        this.bossManager = null;
+        
+        // Enemy projectiles
+        this.enemyProjectiles = [];
         
         // Performance tracking
         this.frameCount = 0;
@@ -70,6 +75,8 @@ class Game {
         this.powerUpManager = new PowerUpManager(this);
         this.achievementManager = new AchievementManager(this);
         this.effectsManager = new EffectsManager(this);
+        this.biomeManager = new BiomeManager(this);
+        this.bossManager = new BossManager(this);
         
         // Generate initial flowers
         this.generateFlowers();
@@ -226,28 +233,61 @@ class Game {
                 });
             }
             
-            // Additional camels (more with higher difficulty)
-            const camelCount = Math.min(3 + Math.floor(this.difficultyLevel / 3), 6);
-            for (let i = 0; i < camelCount; i++) {
+            // Spawn biome-appropriate enemies
+            const biomeEnemies = this.biomeManager.getBiomeEnemies();
+            const enemyCount = Math.min(3 + Math.floor(this.difficultyLevel / 3), 6);
+            
+            for (let i = 0; i < enemyCount; i++) {
                 try {
-                    const camel = new Camel(fromX + 300 + i * 300, this.height - 120, this);
-                    // Increase camel speed with difficulty
-                    if (camel.speed) {
-                        camel.speed *= (1 + this.difficultyLevel * 0.1);
+                    const enemyType = biomeEnemies[Math.floor(Math.random() * biomeEnemies.length)];
+                    const enemyX = fromX + 300 + i * 300;
+                    const enemyY = this.height - 120;
+                    
+                    let enemy;
+                    switch (enemyType) {
+                        case 'camel':
+                            enemy = new Camel(enemyX, enemyY, this);
+                            break;
+                        case 'scorpion':
+                            enemy = new Scorpion(enemyX, enemyY, this);
+                            break;
+                        case 'vulture':
+                            enemy = new Vulture(enemyX, enemyY - 100, this);
+                            break;
+                        case 'rockGolem':
+                            enemy = new RockGolem(enemyX, enemyY - 20, this);
+                            break;
+                        default:
+                            enemy = new Camel(enemyX, enemyY, this);
                     }
-                    this.enemies.push(camel);
-                    console.log('Created camel at x:', fromX + 300 + i * 300, 'difficulty:', this.difficultyLevel);
+                    
+                    // Increase enemy speed with difficulty
+                    if (enemy.speed) {
+                        enemy.speed *= (1 + this.difficultyLevel * 0.1);
+                    }
+                    
+                    this.enemies.push(enemy);
+                    console.log('Created', enemyType, 'at x:', enemyX, 'difficulty:', this.difficultyLevel);
                 } catch (e) {
-                    console.warn('Failed to create camel:', e);
+                    console.warn('Failed to create enemy:', e);
                 }
             }
             
-            // Occasionally spawn power-ups
+            // Spawn biome-appropriate power-ups
             if (Math.random() < 0.3) {
                 const powerUpX = fromX + Math.random() * (toX - fromX);
                 const powerUpY = this.height - 120 - Math.random() * 100;
-                this.powerUpManager.addPowerUp(powerUpX, powerUpY, 
-                    ['speed', 'shield', 'multiThorn', 'jumpBoost'][Math.floor(Math.random() * 4)]);
+                const biomePowerUps = this.biomeManager.getBiomePowerUps();
+                const powerUpType = biomePowerUps[Math.floor(Math.random() * biomePowerUps.length)];
+                this.powerUpManager.addPowerUp(powerUpX, powerUpY, powerUpType);
+            }
+            
+            // Check for boss spawn
+            if (this.biomeManager.shouldSpawnBoss() && !this.bossManager.bossSpawned) {
+                const currentBiome = this.biomeManager.getCurrentBiome();
+                const bossX = fromX + (toX - fromX) / 2;
+                const bossY = this.height - 200;
+                this.bossManager.spawnBoss(this.biomeManager.biomeOrder[this.biomeManager.currentBiomeIndex], bossX, bossY);
             }
             
             // Add sand storms periodically (more frequent with difficulty)
@@ -305,12 +345,17 @@ class Game {
         this.powerUpManager.update(deltaTime);
         this.achievementManager.update(deltaTime);
         this.effectsManager.update(deltaTime);
+        this.biomeManager.update(deltaTime);
+        this.bossManager.update(deltaTime);
         
         // Add player trail effect
         this.effectsManager.addPlayerTrail(this.player);
         
         // Update difficulty scaling
         this.updateDifficulty();
+        
+        // Update enemy projectiles
+        this.updateEnemyProjectiles(deltaTime);
 
         // Update forward boundary (no backtracking)
         // Allow backtracking within current viewport only
@@ -382,6 +427,44 @@ class Game {
         // Check win/lose conditions
         this.checkGameState();
     }
+    
+    updateEnemyProjectiles(deltaTime) {
+        this.enemyProjectiles.forEach(projectile => {
+            if (!projectile.active) return;
+            
+            // Update position
+            projectile.x += projectile.vx;
+            projectile.y += projectile.vy;
+            
+            // Apply gravity to some projectiles
+            if (projectile.type === 'rock' || projectile.type === 'feather') {
+                projectile.vy += this.gravity * 0.5;
+            }
+            
+            // Check collision with player
+            if (this.checkCollision(projectile, this.player)) {
+                if (!this.player.invulnerable && !this.player.isPlanted) {
+                    this.player.loseEnergy();
+                    projectile.active = false;
+                    this.createParticles(projectile.x, projectile.y, '#FFD700', 6);
+                }
+            }
+            
+            // Check collision with ground
+            if (projectile.y > this.height - 80) {
+                projectile.active = false;
+                this.createParticles(projectile.x, projectile.y, '#8B4513', 4);
+            }
+            
+            // Remove if off screen
+            if (projectile.x < -50 || projectile.x > this.worldWidth + 50) {
+                projectile.active = false;
+            }
+        });
+        
+        // Clean up inactive projectiles
+        this.enemyProjectiles = this.enemyProjectiles.filter(p => p.active);
+    }
 
     checkCollisions() {
         // Player vs Flowers
@@ -405,29 +488,29 @@ class Game {
             }
         });
         
-        // Player vs Enemies
-        this.enemies.forEach(enemy => {
-            if (enemy.active && this.checkCollision(this.player, enemy)) {
+        // Player vs Creatures (friendly interaction)
+        this.enemies.forEach(creature => {
+            if (creature.active && this.checkCollision(this.player, creature)) {
                 if (!this.player.isPlanted && !this.player.invulnerable) {
-                    this.player.takeDamage();
-                    this.audioManager.play('damage');
-                    this.effectsManager.addScreenShake(8, 300);
-                    this.createParticles(this.player.x, this.player.y, '#ff0000', 8);
+                    this.player.loseEnergy();
+                    this.audioManager.play('tired');
+                    this.effectsManager.addScreenShake(4, 200);
+                    this.createParticles(this.player.x, this.player.y, '#ffaa00', 5);
                 }
             }
         });
         
-        // Thorns vs Enemies
+        // Thorns vs Creatures (peaceful interaction)
         this.thorns.forEach(thorn => {
-            this.enemies.forEach(enemy => {
-                if (thorn.active && enemy.active && this.checkCollision(thorn, enemy)) {
-                    enemy.takeDamage();
+            this.enemies.forEach(creature => {
+                if (thorn.active && creature.active && this.checkCollision(thorn, creature)) {
+                    creature.befriend();
                     thorn.active = false;
-                    this.audioManager.play('enemyHit');
-                    this.achievementManager.onEnemyHit();
-                    this.effectsManager.addScreenShake(4, 150);
-                    this.effectsManager.createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2, '#8b4513', 8);
-                    this.createParticles(enemy.x, enemy.y, '#8b4513', 6);
+                    this.audioManager.play('friendship');
+                    this.achievementManager.onCreatureBefriended();
+                    this.effectsManager.addScreenShake(2, 100);
+                    this.effectsManager.createSparkles(creature.x + creature.width/2, creature.y + creature.height/2, 8);
+                    this.createParticles(creature.x, creature.y, '#90EE90', 6);
                 }
             });
         });
@@ -494,7 +577,9 @@ class Game {
         const activeEnemies = this.enemies.filter(e => e.active).length;
         const playerX = Math.round(this.player.x);
         const worldWidth = Math.round(this.worldWidth);
-        console.log(`Player at ${playerX}, World: ${worldWidth}, Active enemies: ${activeEnemies}, Total enemies: ${this.enemies.length}, Difficulty: ${this.difficultyLevel}`);
+        const currentBiome = this.biomeManager.getCurrentBiome().name;
+        const projectileCount = this.enemyProjectiles.length;
+        console.log(`Player at ${playerX}, World: ${worldWidth}, Biome: ${currentBiome}, Active enemies: ${activeEnemies}, Total enemies: ${this.enemies.length}, Projectiles: ${projectileCount}, Difficulty: ${this.difficultyLevel}`);
     }
     
     cleanupOldObjects() {
@@ -522,7 +607,8 @@ class Game {
             enemies: this.enemies.length,
             particles: this.particles.length,
             bricks: this.bricks.length,
-            sandStorms: this.environment.sandStorms ? this.environment.sandStorms.length : 0
+            sandStorms: this.environment.sandStorms ? this.environment.sandStorms.length : 0,
+            projectiles: this.enemyProjectiles.length
         });
     }
     
@@ -628,6 +714,12 @@ class Game {
         // Render power-ups
         this.powerUpManager.render(this.ctx);
         
+        // Render boss
+        this.bossManager.render(this.ctx);
+        
+        // Render enemy projectiles
+        this.renderEnemyProjectiles(this.ctx);
+        
         // Render effects
         this.effectsManager.render(this.ctx);
         
@@ -721,6 +813,65 @@ class Game {
             ctx.moveTo(brick.x, brick.y + offsetY + brick.height / 2);
             ctx.lineTo(brick.x + brick.width, brick.y + offsetY + brick.height / 2);
             ctx.stroke();
+            ctx.restore();
+        });
+    }
+    
+    renderEnemyProjectiles(ctx) {
+        this.enemyProjectiles.forEach(projectile => {
+            if (!projectile.active) return;
+            
+            ctx.save();
+            
+            switch (projectile.type) {
+                case 'poison':
+                    ctx.fillStyle = '#8B008B';
+                    ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+                    // Poison glow
+                    ctx.shadowColor = '#8B008B';
+                    ctx.shadowBlur = 5;
+                    ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+                    break;
+                    
+                case 'rock':
+                    ctx.fillStyle = '#696969';
+                    ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+                    // Rock texture
+                    ctx.strokeStyle = '#2F4F4F';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(projectile.x, projectile.y, projectile.width, projectile.height);
+                    break;
+                    
+                case 'wind':
+                    ctx.strokeStyle = '#87CEEB';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(projectile.x + projectile.width/2, projectile.y + projectile.height/2, projectile.width/2, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
+                    
+                case 'feather':
+                    ctx.fillStyle = '#2F4F4F';
+                    ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+                    // Feather details
+                    ctx.strokeStyle = '#696969';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(projectile.x + projectile.width/2, projectile.y);
+                    ctx.lineTo(projectile.x + projectile.width/2, projectile.y + projectile.height);
+                    ctx.stroke();
+                    break;
+                    
+                case 'sand':
+                    ctx.fillStyle = '#D2B48C';
+                    ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+                    break;
+                    
+                default:
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+            }
+            
             ctx.restore();
         });
     }

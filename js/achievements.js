@@ -17,10 +17,10 @@ class AchievementManager {
             { id: 'nomad', name: 'Desert Nomad', description: 'Travel 15000 pixels', target: 15000, icon: '🏃', type: 'distance' },
             { id: 'wanderer', name: 'Eternal Wanderer', description: 'Travel 50000 pixels', target: 50000, icon: '🌟', type: 'distance' },
             
-            // Combat achievements
-            { id: 'marksman', name: 'Thorn Marksman', description: 'Hit 50 enemies with thorns', target: 50, icon: '🎯', type: 'enemiesHit' },
-            { id: 'warrior', name: 'Desert Warrior', description: 'Hit 200 enemies with thorns', target: 200, icon: '⚔️', type: 'enemiesHit' },
-            { id: 'legend', name: 'Cactus Legend', description: 'Hit 500 enemies with thorns', target: 500, icon: '👑', type: 'enemiesHit' },
+            // Friendship achievements
+            { id: 'peacemaker', name: 'Desert Peacemaker', description: 'Befriend 50 creatures', target: 50, icon: '🌿', type: 'creaturesBefriended' },
+            { id: 'harmony', name: 'Desert Harmony', description: 'Befriend 200 creatures', target: 200, icon: '🌈', type: 'creaturesBefriended' },
+            { id: 'legend', name: 'Cactus Legend', description: 'Befriend 500 creatures', target: 500, icon: '👑', type: 'creaturesBefriended' },
             
             // Collection achievements
             { id: 'collector', name: 'Flower Collector', description: 'Collect 100 flowers', target: 100, icon: '🌸', type: 'flowersCollected' },
@@ -44,7 +44,19 @@ class AchievementManager {
             
             // Growth achievements
             { id: 'grower', name: 'Growing Strong', description: 'Reach maximum size', target: 3, icon: '📏', type: 'maxSize' },
-            { id: 'superflower', name: 'Super Collector', description: 'Collect 50 super flowers', target: 50, icon: '🌟', type: 'superFlowersCollected' }
+            { id: 'superflower', name: 'Super Collector', description: 'Collect 50 super flowers', target: 50, icon: '🌟', type: 'superFlowersCollected' },
+            
+            // Biome achievements
+            { id: 'desertExplorer', name: 'Desert Explorer', description: 'Enter the Desert biome', target: 1, icon: '🏜️', type: 'biomesEntered' },
+            { id: 'oasisFinder', name: 'Oasis Finder', description: 'Enter the Oasis biome', target: 1, icon: '🌴', type: 'biomesEntered' },
+            { id: 'canyonClimber', name: 'Canyon Climber', description: 'Enter the Rocky Canyon biome', target: 1, icon: '🏔️', type: 'biomesEntered' },
+            { id: 'ruinsSeeker', name: 'Ruins Seeker', description: 'Enter the Ancient Ruins biome', target: 1, icon: '🏛️', type: 'biomesEntered' },
+            
+            // Guardian achievements
+            { id: 'wormFriend', name: 'Worm Whisperer', description: 'Befriend the Sand Worm guardian', target: 1, icon: '🐛', type: 'guardiansBefriended' },
+            { id: 'skyFriend', name: 'Sky Friend', description: 'Befriend the Giant Vulture guardian', target: 1, icon: '🦅', type: 'guardiansBefriended' },
+            { id: 'rockFriend', name: 'Rock Friend', description: 'Befriend the Rock Titan guardian', target: 1, icon: '🗿', type: 'guardiansBefriended' },
+            { id: 'ancientFriend', name: 'Ancient Friend', description: 'Befriend the Ancient Guardian', target: 1, icon: '🌿', type: 'guardiansBefriended' }
         ];
         
         achievements.forEach(ach => {
@@ -209,8 +221,8 @@ class AchievementManager {
         }
     }
     
-    onEnemyHit() {
-        this.increment('enemiesHit');
+    onCreatureBefriended() {
+        this.increment('creaturesBefriended');
     }
     
     onStormWeathered() {
@@ -227,6 +239,34 @@ class AchievementManager {
     
     onPlantUsed() {
         this.increment('plantsUsed');
+    }
+    
+    onBiomeEntered(biomeName) {
+        const biomeAchievements = {
+            'desert': 'desertExplorer',
+            'oasis': 'oasisFinder',
+            'canyon': 'canyonClimber',
+            'ruins': 'ruinsSeeker'
+        };
+        
+        const achievementId = biomeAchievements[biomeName];
+        if (achievementId) {
+            this.unlockAchievement(achievementId);
+        }
+    }
+    
+    onGuardianBefriended(guardianName) {
+        const guardianAchievements = {
+            'Sand Worm': 'wormFriend',
+            'Giant Vulture': 'skyFriend',
+            'Rock Titan': 'rockFriend',
+            'Ancient Guardian': 'ancientFriend'
+        };
+        
+        const achievementId = guardianAchievements[guardianName];
+        if (achievementId) {
+            this.unlockAchievement(achievementId);
+        }
     }
     
     onPowerUpCollected() {
