@@ -197,6 +197,23 @@ class UI {
         );
     }
     
+    showPowerUpMessage(powerUpData) {
+        this.showAlert(
+            `${powerUpData.icon} ${powerUpData.name}!`,
+            powerUpData.color,
+            2000
+        );
+    }
+    
+    showAchievementUnlocked(achievement) {
+        this.showAlert(
+            `🏆 Achievement Unlocked: ${achievement.name}!`,
+            'rgba(255, 215, 0, 0.95)',
+            4000,
+            'pulse 0.5s infinite'
+        );
+    }
+    
     showEnemyDefeated() {
         this.showAlert(
             '🌵 Camel defeated! +10 points',

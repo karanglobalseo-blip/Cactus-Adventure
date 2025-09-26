@@ -30,6 +30,12 @@ class Player {
         // Animation
         this.animationFrame = 0;
         this.animationTimer = 0;
+        
+        // Power-up system
+        this.powerUpEffects = new PlayerPowerUpEffects(this);
+        this.multiThorn = false;
+        this.thornRegen = false;
+        this.shieldActive = false;
         this.facingRight = true;
         
         // Input handling
@@ -49,6 +55,11 @@ class Player {
         this.invulnerable = false;
         this.invulnerabilityTimer = 0;
         this.plantedTimer = 0;
+        this.multiThorn = false;
+        this.thornRegen = false;
+        this.shieldActive = false;
+        // Reset power-ups
+        this.powerUpEffects = new PlayerPowerUpEffects(this);
     }
     
     update(deltaTime) {
@@ -56,6 +67,7 @@ class Player {
         this.updatePhysics(deltaTime);
         this.updateStates(deltaTime);
         this.updateAnimation(deltaTime);
+        this.powerUpEffects.update(deltaTime);
     }
     
     handleInput() {
@@ -76,6 +88,8 @@ class Player {
         if ((game.keys['ArrowUp'] || game.keys['KeyW'] || game.touches['jump']) && this.isGrounded && !this.isPlanted) {
             this.vy = -this.jumpPower;
             this.isGrounded = false;
+            this.game.audioManager.play('jump');
+            this.game.achievementManager.onJump();
         }
         
         // Thorn throwing
@@ -171,7 +185,16 @@ class Player {
         const thornY = this.y + this.height / 2;
         const direction = this.facingRight ? 1 : -1;
         
-        this.game.thorns.push(new Thorn(thornX, thornY, direction, this.game));
+        // Multi-thorn power-up
+        if (this.multiThorn) {
+            this.game.thorns.push(new Thorn(thornX, thornY - 10, direction, this.game));
+            this.game.thorns.push(new Thorn(thornX, thornY, direction, this.game));
+            this.game.thorns.push(new Thorn(thornX, thornY + 10, direction, this.game));
+        } else {
+            this.game.thorns.push(new Thorn(thornX, thornY, direction, this.game));
+        }
+        
+        this.game.audioManager.play('thorn');
     }
     
     togglePlant() {
@@ -183,6 +206,8 @@ class Player {
             this.plantedTimer = 3000; // 3 seconds
             this.vx = 0;
             this.vy = 0;
+            this.game.audioManager.play('plant');
+            this.game.achievementManager.onPlantUsed();
         }
     }
     
@@ -195,6 +220,11 @@ class Player {
             // Normal flower does NOT grow size; small thorn restore remains
             this.thorns = Math.min(this.thorns + 1, this.maxThorns);
         }
+    }
+    
+    addPowerUp(type, duration) {
+        this.powerUpEffects.addPowerUp(type, duration);
+        this.game.achievementManager.onPowerUpCollected();
     }
     
     grow(amount) {
@@ -249,10 +279,27 @@ class Player {
         // Draw cactus body
         this.drawCactus(ctx);
         
+        // Shield glow effect
+        if (this.shieldActive) {
+            ctx.save();
+            ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.01) * 0.2;
+            ctx.shadowColor = '#0080ff';
+            ctx.shadowBlur = 15;
+            ctx.strokeStyle = '#0080ff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2 + 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+        
         // Draw planted effect
         if (this.isPlanted) {
             this.drawPlantedEffect(ctx);
         }
+        
+        // Draw power-up effects
+        this.powerUpEffects.renderEffects(ctx);
         
         ctx.restore();
     }

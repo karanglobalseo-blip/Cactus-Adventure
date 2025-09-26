@@ -15,6 +15,8 @@ class Game {
         this.flowerCount = 0;
         this.targetFlowers = 100;
         this.maxProgressX = 0; // furthest player has reached
+        this.difficultyLevel = 1;
+        this.lastDifficultyIncrease = 0;
         
         // Game objects
         this.player = null;
@@ -45,6 +47,12 @@ class Game {
         this.gravity = 0.8 * this.speedFactor;
         this.friction = 0.85;
         
+        // Initialize new systems
+        this.audioManager = null;
+        this.powerUpManager = null;
+        this.achievementManager = null;
+        this.effectsManager = null;
+        
         this.init();
     }
     
@@ -52,6 +60,12 @@ class Game {
         this.setupEventListeners();
         this.player = new Player(100, this.height - 200, this);
         this.environment = new Environment(this);
+        
+        // Initialize new systems
+        this.audioManager = new AudioManager();
+        this.powerUpManager = new PowerUpManager(this);
+        this.achievementManager = new AchievementManager(this);
+        this.effectsManager = new EffectsManager(this);
         
         // Generate initial flowers
         this.generateFlowers();
@@ -110,7 +124,10 @@ class Game {
         this.addTouchEvents(thornBtn, 'thorn');
         this.addTouchEvents(plantBtn, 'plant');
         
-        startBtn.addEventListener('click', () => this.startGame());
+        startBtn.addEventListener('click', () => {
+            this.audioManager.resumeContext();
+            this.startGame();
+        });
 
         // Settings button
         const settingsBtn = document.getElementById('settingsBtn');
@@ -202,15 +219,30 @@ class Game {
                 hit: false
             });
         }
-        // Additional camels
-        for (let i = 0; i < 3; i++) {
-            this.enemies.push(new Camel(fromX + 300 + i * 400, this.height - 120, this));
+        // Additional camels (more with higher difficulty)
+        const camelCount = Math.min(3 + Math.floor(this.difficultyLevel / 3), 6);
+        for (let i = 0; i < camelCount; i++) {
+            const camel = new Camel(fromX + 300 + i * 300, this.height - 120, this);
+            // Increase camel speed with difficulty
+            camel.speed *= (1 + this.difficultyLevel * 0.1);
+            this.enemies.push(camel);
         }
-        // Add sand storms periodically (every few chunks)
+        // Occasionally spawn power-ups
+        if (Math.random() < 0.3) {
+            const powerUpX = fromX + Math.random() * (toX - fromX);
+            const powerUpY = this.height - 120 - Math.random() * 100;
+            this.powerUpManager.addPowerUp(powerUpX, powerUpY, 
+                ['speed', 'shield', 'multiThorn', 'jumpBoost'][Math.floor(Math.random() * 4)]);
+        }
+        // Add sand storms periodically (more frequent with difficulty)
         const chunkId = Math.floor(fromX / (this.width * 5));
-        if (chunkId % 3 === 1) { // spawn storm every 3rd chunk
+        const stormFreq = Math.max(1, 4 - Math.floor(this.difficultyLevel / 2));
+        if (chunkId % stormFreq === 1) {
             const stormX = fromX + Math.random() * (toX - fromX - 200);
-            this.environment.sandStorms.push(new SandStorm(stormX, 0, this.height, this));
+            const storm = new SandStorm(stormX, 0, this.height, this);
+            // Increase storm speed with difficulty
+            storm.vx *= (1 + this.difficultyLevel * 0.15);
+            this.environment.sandStorms.push(storm);
         }
     }
     
@@ -242,6 +274,17 @@ class Game {
         else { this.keys['ArrowUp'] = false; }
 
         this.player.update(deltaTime);
+        
+        // Update new systems
+        this.powerUpManager.update(deltaTime);
+        this.achievementManager.update(deltaTime);
+        this.effectsManager.update(deltaTime);
+        
+        // Add player trail effect
+        this.effectsManager.addPlayerTrail(this.player);
+        
+        // Update difficulty scaling
+        this.updateDifficulty();
 
         // Update forward boundary (no backtracking)
         // Allow backtracking within current viewport only
@@ -307,8 +350,15 @@ class Game {
                 this.flowerCount += 1;
                 this.score += flower.type === 'super' ? 20 : 10;
                 
+                // Play sound and track achievement
+                this.audioManager.play(flower.type === 'super' ? 'superFlower' : 'flower');
+                this.achievementManager.onFlowerCollected(flower.type);
+                
                 // Create particle effect
                 this.createParticles(flower.x, flower.y, '#ff69b4', 5);
+                if (flower.type === 'super') {
+                    this.effectsManager.createSparkles(flower.x, flower.y, 8);
+                }
             }
         });
         
@@ -317,6 +367,8 @@ class Game {
             if (enemy.active && this.checkCollision(this.player, enemy)) {
                 if (!this.player.isPlanted && !this.player.invulnerable) {
                     this.player.takeDamage();
+                    this.audioManager.play('damage');
+                    this.effectsManager.addScreenShake(8, 300);
                     this.createParticles(this.player.x, this.player.y, '#ff0000', 8);
                 }
             }
@@ -328,6 +380,10 @@ class Game {
                 if (thorn.active && enemy.active && this.checkCollision(thorn, enemy)) {
                     enemy.takeDamage();
                     thorn.active = false;
+                    this.audioManager.play('enemyHit');
+                    this.achievementManager.onEnemyHit();
+                    this.effectsManager.addScreenShake(4, 150);
+                    this.effectsManager.createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2, '#8b4513', 8);
                     this.createParticles(enemy.x, enemy.y, '#8b4513', 6);
                 }
             });
@@ -359,6 +415,21 @@ class Game {
         // Enforce forward-only boundary: don't allow camera (and thus player usability) to move backwards past boundary
         if (this.player.x < this.forwardBoundary) {
             this.player.x = this.forwardBoundary;
+        }
+    }
+    
+    updateDifficulty() {
+        // Increase difficulty every 3000 pixels traveled
+        const distanceTraveled = this.maxProgressX;
+        const newDifficultyLevel = Math.floor(distanceTraveled / 3000) + 1;
+        
+        if (newDifficultyLevel > this.difficultyLevel) {
+            this.difficultyLevel = newDifficultyLevel;
+            this.ui.showAlert(
+                `🔥 Difficulty Increased! Level ${this.difficultyLevel}`,
+                'rgba(255, 100, 0, 0.9)',
+                3000
+            );
         }
     }
     
@@ -461,6 +532,12 @@ class Game {
         // Render particles
         this.particles.forEach(particle => particle.render(this.ctx));
         
+        // Render power-ups
+        this.powerUpManager.render(this.ctx);
+        
+        // Render effects
+        this.effectsManager.render(this.ctx);
+        
         // Restore context
         this.ctx.restore();
         
@@ -499,6 +576,9 @@ class Game {
             this.ctx.beginPath();
             this.ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
             this.ctx.stroke();
+            
+            // Bloom effect for super flowers
+            this.effectsManager.renderBloom(this.ctx, centerX, centerY, 15, 'rgba(255, 215, 0, 0.3)');
         }
 
         this.ctx.restore();
@@ -512,6 +592,8 @@ class Game {
             if (!brick.hit && this.checkCollision(head, brick) && (this.player.prevY + this.player.height) >= (brick.y + brick.height)) {
                 brick.hit = true;
                 brick.bumpTimer = 200;
+                this.audioManager.play('brick');
+                this.achievementManager.onBrickHit();
                 // Spawn a flower above the brick
                 const type = Math.random() < 0.2 ? 'super' : 'normal';
                 this.flowers.push({
