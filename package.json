@@ -1,0 +1,56 @@
+{
+  "name": "cactus-quest",
+  "version": "1.0.0",
+  "description": "A 2D mobile adventure game starring a heroic cactus navigating a desert",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx http-server -p 8000 -o",
+    "build": "echo 'No build process required for vanilla HTML5 game'",
+    "test": "echo 'No tests specified'",
+    "deploy": "echo 'Ready for deployment to web server'"
+  },
+  "keywords": [
+    "game",
+    "html5",
+    "canvas",
+    "mobile",
+    "2d",
+    "adventure",
+    "cactus",
+    "desert",
+    "javascript"
+  ],
+  "author": "Cactus Quest Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/cactus-quest.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/cactus-quest/issues"
+  },
+  "homepage": "https://your-username.github.io/cactus-quest",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "iOS >= 10",
+    "Android >= 6"
+  ],
+  "pwa": {
+    "name": "Cactus Quest",
+    "short_name": "CactusQuest",
+    "description": "A 2D mobile adventure game",
+    "theme_color": "#f39c12",
+    "background_color": "#87ceeb",
+    "display": "standalone",
+    "orientation": "landscape"
+  }
+}

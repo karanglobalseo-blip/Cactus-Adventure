@@ -1,0 +1,34 @@
+# Node / JS dependencies
+node_modules/
+.npm/
+
+# Build outputs
+/dist/
+/build/
+/cache/
+.tmp/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Environment / secrets
+.env
+.env.*.local
+
+# Coverage / test outputs
+coverage/
+
+# Misc
+*.zip
+*.tar
+*.tar.gz
