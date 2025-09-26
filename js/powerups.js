@@ -73,21 +73,33 @@ class PowerUp {
     collect() {
         if (this.collected) return;
         
-        this.collected = true;
-        this.active = false;
-        
-        // Apply power-up effect to player
-        this.game.player.addPowerUp(this.type, this.powerUpData[this.type].duration);
-        
-        // Play sound and show notification
-        this.game.audioManager.play('powerup');
-        this.game.ui.showPowerUpMessage(this.powerUpData[this.type]);
-        
-        // Create particles
-        this.game.createParticles(this.x, this.y, this.powerUpData[this.type].color, 8);
-        
-        // Track achievement
-        this.game.achievementManager.increment('powerupsCollected');
+        try {
+            this.collected = true;
+            this.active = false;
+            
+            // Apply power-up effect to player
+            this.game.player.addPowerUp(this.type, this.powerUpData[this.type].duration);
+            
+            // Play sound and show notification
+            if (this.game.audioManager) {
+                this.game.audioManager.play('powerup');
+            }
+            if (this.game.ui) {
+                this.game.ui.showPowerUpMessage(this.powerUpData[this.type]);
+            }
+            
+            // Create particles
+            this.game.createParticles(this.x, this.y, this.powerUpData[this.type].color, 8);
+            
+            // Track achievement
+            if (this.game.achievementManager) {
+                this.game.achievementManager.increment('powerupsCollected');
+            }
+        } catch (error) {
+            console.error('Error collecting power-up:', error);
+            this.collected = true;
+            this.active = false;
+        }
     }
     
     render(ctx) {
@@ -177,48 +189,59 @@ class PlayerPowerUpEffects {
     }
     
     addPowerUp(type, duration) {
-        // Remove existing power-up of same type
-        if (this.activePowerUps.has(type)) {
-            this.removePowerUp(type);
+        try {
+            // Remove existing power-up of same type
+            if (this.activePowerUps.has(type)) {
+                this.removePowerUp(type);
+            }
+            
+            const powerUp = {
+                type: type,
+                timeRemaining: duration,
+                originalValues: {}
+            };
+            
+            // Apply power-up effects
+            switch (type) {
+                case 'speed':
+                    powerUp.originalValues.speed = this.player.speed;
+                    this.player.speed *= 1.5;
+                    break;
+                    
+                case 'shield':
+                    powerUp.originalValues.invulnerable = this.player.invulnerable || false;
+                    powerUp.originalValues.invulnerabilityTimer = this.player.invulnerabilityTimer || 0;
+                    this.player.invulnerable = true;
+                    this.player.invulnerabilityTimer = Math.max(this.player.invulnerabilityTimer || 0, duration);
+                    this.player.shieldActive = true;
+                    break;
+                    
+                case 'multiThorn':
+                    this.player.multiThorn = true;
+                    break;
+                    
+                case 'jumpBoost':
+                    powerUp.originalValues.jumpPower = this.player.jumpPower;
+                    this.player.jumpPower *= 1.4;
+                    break;
+                    
+                case 'thornRegen':
+                    this.player.thornRegen = true;
+                    break;
+                    
+                default:
+                    console.warn('Unknown power-up type:', type);
+                    return;
+            }
+            
+            this.activePowerUps.set(type, powerUp);
+        } catch (error) {
+            console.error('Error adding power-up:', error, 'Type:', type);
         }
-        
-        const powerUp = {
-            type: type,
-            timeRemaining: duration,
-            originalValues: {}
-        };
-        
-        // Apply power-up effects
-        switch (type) {
-            case 'speed':
-                powerUp.originalValues.speed = this.player.speed;
-                this.player.speed *= 1.5;
-                break;
-                
-            case 'shield':
-                powerUp.originalValues.invulnerable = this.player.invulnerable;
-                this.player.invulnerable = true;
-                this.player.shieldActive = true;
-                break;
-                
-            case 'multiThorn':
-                this.player.multiThorn = true;
-                break;
-                
-            case 'jumpBoost':
-                powerUp.originalValues.jumpPower = this.player.jumpPower;
-                this.player.jumpPower *= 1.4;
-                break;
-                
-            case 'thornRegen':
-                this.player.thornRegen = true;
-                break;
-        }
-        
-        this.activePowerUps.set(type, powerUp);
     }
     
     update(deltaTime) {
+        const toRemove = [];
         for (const [type, powerUp] of this.activePowerUps) {
             powerUp.timeRemaining -= deltaTime;
             
@@ -228,9 +251,12 @@ class PlayerPowerUpEffects {
             }
             
             if (powerUp.timeRemaining <= 0) {
-                this.removePowerUp(type);
+                toRemove.push(type);
             }
         }
+        
+        // Remove expired power-ups
+        toRemove.forEach(type => this.removePowerUp(type));
     }
     
     removePowerUp(type) {
@@ -244,7 +270,8 @@ class PlayerPowerUpEffects {
                 break;
                 
             case 'shield':
-                this.player.invulnerable = powerUp.originalValues.invulnerable;
+                this.player.invulnerable = powerUp.originalValues.invulnerable || false;
+                this.player.invulnerabilityTimer = powerUp.originalValues.invulnerabilityTimer || 0;
                 this.player.shieldActive = false;
                 break;
                 
