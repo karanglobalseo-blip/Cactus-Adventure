@@ -257,7 +257,12 @@ class Game {
                         case 'rockGolem':
                             enemy = new RockGolem(enemyX, enemyY - 20, this);
                             break;
+                        case 'ancientGuardian':
+                            // For now, use RockGolem as placeholder for ancient guardian
+                            enemy = new RockGolem(enemyX, enemyY - 20, this);
+                            break;
                         default:
+                            console.warn('Unknown enemy type:', enemyType, 'using Camel instead');
                             enemy = new Camel(enemyX, enemyY, this);
                     }
                     
@@ -267,7 +272,7 @@ class Game {
                     }
                     
                     this.enemies.push(enemy);
-                    console.log('Created', enemyType, 'at x:', enemyX, 'difficulty:', this.difficultyLevel);
+                    console.log('Created', enemyType, 'at x:', enemyX, 'difficulty:', this.difficultyLevel, 'has befriend:', typeof enemy.befriend === 'function');
                 } catch (e) {
                     console.warn('Failed to create enemy:', e);
                 }
@@ -504,9 +509,11 @@ class Game {
         this.thorns.forEach(thorn => {
             this.enemies.forEach(creature => {
                 if (thorn.active && creature.active && this.checkCollision(thorn, creature)) {
+                    console.log('Thorn hit creature:', creature.constructor.name, 'thorn at:', thorn.x, thorn.y, 'creature at:', creature.x, creature.y);
                     // Safety check for befriend method
                     if (typeof creature.befriend === 'function') {
                         creature.befriend();
+                        console.log('Befriended creature:', creature.constructor.name, 'at', creature.x, creature.y);
                     } else {
                         // Fallback for creatures without befriend method
                         creature.active = false;
