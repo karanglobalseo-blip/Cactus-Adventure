@@ -154,19 +154,6 @@ class Environment {
     }
     
     renderBackground(ctx) {
-        // If background image exists, tile it across worldWidth
-        const bg = this.game.assets && this.game.assets.background;
-        if (bg && bg.complete) {
-            const tileW = bg.width;
-            const tileH = bg.height;
-            const scale = Math.max((this.game.height) / tileH, 0.5);
-            const drawW = tileW * scale;
-            const drawH = tileH * scale;
-            for (let x = 0; x < this.game.worldWidth + drawW; x += drawW) {
-                ctx.drawImage(bg, x, 0, drawW, drawH);
-            }
-            return; // Skip vector fallback if image exists
-        }
         // Sky gradient
         const skyGradient = ctx.createLinearGradient(0, 0, 0, this.game.height * 0.7);
         skyGradient.addColorStop(0, '#87CEEB');

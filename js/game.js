@@ -6,7 +6,7 @@ class Game {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
         // World dimensions (increase travel distance)
-        this.worldWidth = this.width * 4; // previously ~2x; now 4x to increase range
+        this.worldWidth = this.width * 10; // extend world to 10x screen width
         
         // Game state
         this.state = 'menu'; // menu, playing, paused, gameOver
@@ -42,13 +42,6 @@ class Game {
         this.gravity = 0.8 * this.speedFactor;
         this.friction = 0.85;
         
-        // Assets
-        this.assets = {
-            cactus: null,
-            background: null,
-            storm: null,
-        };
-        
         this.init();
     }
     
@@ -57,9 +50,6 @@ class Game {
         this.player = new Player(100, this.height - 200, this);
         this.environment = new Environment(this);
         
-        // Load assets (non-blocking, renderers will fallback if missing)
-        this.loadAssets();
-        
         // Generate initial flowers
         this.generateFlowers();
         // Generate bricks (Mario-style)
@@ -67,22 +57,6 @@ class Game {
         
         // Start game loop
         this.gameLoop();
-    }
-    
-    // Lightweight image asset loader
-    loadAssets() {
-        const load = (path) => {
-            const img = new Image();
-            img.src = path;
-            return img;
-        };
-        try {
-            this.assets.cactus = load('assets/cactus.png');
-            this.assets.background = load('assets/background.png');
-            this.assets.storm = load('assets/storm.png');
-        } catch (err) {
-            console.warn('Asset loading error:', err);
-        }
     }
     
     setupEventListeners() {

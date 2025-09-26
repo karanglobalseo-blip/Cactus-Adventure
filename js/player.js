@@ -258,13 +258,7 @@ class Player {
     }
     
     drawCactus(ctx) {
-        // If an image is supplied, draw it and return
-        if (this.game && this.game.assets && this.game.assets.cactus && this.game.assets.cactus.complete) {
-            const img = this.game.assets.cactus;
-            // Maintain the same hitbox; center the image within it visually
-            ctx.drawImage(img, this.x - this.width * 0.2, this.y - this.height * 0.15, this.width * 1.4, this.height * 1.3);
-            return;
-        }
+        // Vector drawing only
         const centerX = this.x + this.width / 2;
         const bottomY = this.y + this.height;
 
