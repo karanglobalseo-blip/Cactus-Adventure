@@ -293,6 +293,13 @@ class Scorpion {
         }
     }
     
+    befriend() {
+        this.active = false;
+        this.state = 'friendly';
+        // Create happy particles
+        this.game.createParticles(this.x + this.width/2, this.y + this.height/2, '#90EE90', 12);
+    }
+    
     render(ctx) {
         if (!this.active) return;
         
@@ -466,6 +473,13 @@ class Vulture {
             this.active = false;
             this.game.createParticles(this.x + this.width/2, this.y + this.height/2, '#654321', 10);
         }
+    }
+    
+    befriend() {
+        this.active = false;
+        this.state = 'friendly';
+        // Create happy particles
+        this.game.createParticles(this.x + this.width/2, this.y + this.height/2, '#90EE90', 12);
     }
     
     render(ctx) {
@@ -683,6 +697,13 @@ class RockGolem {
             this.game.createParticles(this.x + this.width/2, this.y + this.height/2, '#8B4513', 20);
             this.game.effectsManager.addScreenShake(8, 600);
         }
+    }
+    
+    befriend() {
+        this.active = false;
+        this.state = 'friendly';
+        // Create happy particles
+        this.game.createParticles(this.x + this.width/2, this.y + this.height/2, '#90EE90', 15);
     }
     
     render(ctx) {

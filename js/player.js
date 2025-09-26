@@ -268,6 +268,18 @@ class Player {
         this.vy = -5;
     }
     
+    loseEnergy() {
+        if (this.invulnerable) return;
+        
+        this.health--;
+        this.invulnerable = true;
+        this.invulnerabilityTimer = 1500; // 1.5 seconds (gentler than damage)
+        
+        // Gentle knockback effect
+        this.vx = this.facingRight ? -4 : 4;
+        this.vy = -3;
+    }
+    
     render(ctx) {
         ctx.save();
         

@@ -181,6 +181,13 @@ class Camel {
         }
     }
     
+    befriend() {
+        this.active = false;
+        this.state = 'friendly';
+        // Create happy particles
+        this.game.createParticles(this.x + this.width/2, this.y + this.height/2, '#90EE90', 12);
+    }
+    
     render(ctx) {
         if (!this.active) return;
         
