@@ -20,29 +20,11 @@ class Environment {
     }
     
     generateShelters() {
-        // Create shelter locations
+        // Create shelter locations as wooden shacks
         this.shelters = [
-            {
-                x: 400,
-                y: this.game.height - 150,
-                width: 100,
-                height: 70,
-                type: 'rock'
-            },
-            {
-                x: 800,
-                y: this.game.height - 140,
-                width: 120,
-                height: 60,
-                type: 'oasis'
-            },
-            {
-                x: 1200,
-                y: this.game.height - 160,
-                width: 80,
-                height: 80,
-                type: 'cave'
-            }
+            { x: 420,  y: this.game.height - 160, width: 100, height: 80, type: 'shack' },
+            { x: 950,  y: this.game.height - 155, width: 110, height: 75, type: 'shack' },
+            { x: 1500, y: this.game.height - 165, width: 120, height: 85, type: 'shack' }
         ];
     }
     
@@ -338,106 +320,61 @@ class Environment {
     
     renderShelter(ctx, shelter) {
         ctx.save();
-        
-        switch (shelter.type) {
-            case 'rock':
-                // Rock formation shelter
-                ctx.fillStyle = '#696969';
+        // Wooden shack: base rectangle, roof, door, planks
+        if (shelter.type === 'shack') {
+            // Base
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(shelter.x, shelter.y, shelter.width, shelter.height);
+
+            // Plank lines
+            ctx.strokeStyle = '#5A2E0C';
+            ctx.lineWidth = 2;
+            for (let i = 1; i < 5; i++) {
+                const px = shelter.x + (i * shelter.width / 5);
                 ctx.beginPath();
-                ctx.ellipse(
-                    shelter.x + shelter.width / 2,
-                    shelter.y + shelter.height,
-                    shelter.width / 2,
-                    shelter.height / 2,
-                    0, Math.PI, 0
-                );
-                ctx.fill();
-                
-                // Add some texture
-                ctx.fillStyle = '#778899';
-                ctx.beginPath();
-                ctx.ellipse(
-                    shelter.x + shelter.width * 0.3,
-                    shelter.y + shelter.height * 0.7,
-                    shelter.width * 0.2,
-                    shelter.height * 0.2,
-                    0, 0, Math.PI * 2
-                );
-                ctx.fill();
-                break;
-                
-            case 'oasis':
-                // Oasis with palm tree
-                ctx.fillStyle = '#4169E1';
-                ctx.beginPath();
-                ctx.ellipse(
-                    shelter.x + shelter.width / 2,
-                    shelter.y + shelter.height,
-                    shelter.width * 0.4,
-                    shelter.height * 0.3,
-                    0, 0, Math.PI * 2
-                );
-                ctx.fill();
-                
-                // Palm tree trunk
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(
-                    shelter.x + shelter.width * 0.7,
-                    shelter.y,
-                    8,
-                    shelter.height
-                );
-                
-                // Palm fronds
-                ctx.strokeStyle = '#228B22';
-                ctx.lineWidth = 4;
-                for (let i = 0; i < 6; i++) {
-                    const angle = (i * Math.PI * 2) / 6;
-                    ctx.beginPath();
-                    ctx.moveTo(shelter.x + shelter.width * 0.7 + 4, shelter.y + 10);
-                    ctx.lineTo(
-                        shelter.x + shelter.width * 0.7 + 4 + Math.cos(angle) * 25,
-                        shelter.y + 10 + Math.sin(angle) * 15
-                    );
-                    ctx.stroke();
-                }
-                break;
-                
-            case 'cave':
-                // Cave entrance
-                ctx.fillStyle = '#2F4F4F';
-                ctx.beginPath();
-                ctx.arc(
-                    shelter.x + shelter.width / 2,
-                    shelter.y + shelter.height,
-                    shelter.width / 2,
-                    Math.PI, 0
-                );
-                ctx.fill();
-                
-                // Cave interior (darker)
-                ctx.fillStyle = '#000000';
-                ctx.beginPath();
-                ctx.arc(
-                    shelter.x + shelter.width / 2,
-                    shelter.y + shelter.height,
-                    shelter.width * 0.3,
-                    Math.PI, 0
-                );
-                ctx.fill();
-                break;
+                ctx.moveTo(px, shelter.y);
+                ctx.lineTo(px, shelter.y + shelter.height);
+                ctx.stroke();
+            }
+
+            // Roof
+            ctx.fillStyle = '#A0522D';
+            ctx.beginPath();
+            ctx.moveTo(shelter.x - 10, shelter.y);
+            ctx.lineTo(shelter.x + shelter.width / 2, shelter.y - shelter.height * 0.4);
+            ctx.lineTo(shelter.x + shelter.width + 10, shelter.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Door
+            ctx.fillStyle = '#3E1F0C';
+            const doorW = shelter.width * 0.25;
+            const doorH = shelter.height * 0.55;
+            ctx.fillRect(
+                shelter.x + shelter.width * 0.1,
+                shelter.y + shelter.height - doorH,
+                doorW,
+                doorH
+            );
+
+            // Window
+            ctx.fillStyle = '#C0D6E4';
+            const winW = shelter.width * 0.22;
+            const winH = shelter.height * 0.3;
+            ctx.fillRect(
+                shelter.x + shelter.width * 0.6,
+                shelter.y + shelter.height * 0.25,
+                winW,
+                winH
+            );
+            ctx.strokeStyle = '#5A2E0C';
+            ctx.strokeRect(
+                shelter.x + shelter.width * 0.6,
+                shelter.y + shelter.height * 0.25,
+                winW,
+                winH
+            );
         }
-        
-        // Shelter indicator
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-        ctx.fillRect(shelter.x, shelter.y, shelter.width, shelter.height);
-        
-        // Shelter label
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('SHELTER', shelter.x + shelter.width / 2, shelter.y - 5);
-        
         ctx.restore();
     }
     

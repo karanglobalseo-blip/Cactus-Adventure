@@ -2,23 +2,31 @@
 Write-Host "🌵 Starting Cactus Quest Web Server..." -ForegroundColor Green
 Write-Host ""
 
-# Check if Python is available
-$pythonPath = Get-Command python -ErrorAction SilentlyContinue
-if ($pythonPath) {
+# Robust Python detection: try to actually run it
+$pythonAvailable = $false
+try {
+    $null = & python --version 2>$null
+    if ($LASTEXITCODE -eq 0) { $pythonAvailable = $true }
+} catch { $pythonAvailable = $false }
+
+if ($pythonAvailable) {
     Write-Host "Using Python HTTP server..." -ForegroundColor Yellow
     Write-Host "Game will be available at: http://localhost:8000" -ForegroundColor Cyan
     Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Gray
     Write-Host ""
     
+    # Open browser
+    Start-Process "http://localhost:8000"
+    
     # Start Python server
     python -m http.server 8000
 } else {
-    # Fallback: Try to use PowerShell's built-in web server (Windows 10+)
-    Write-Host "Python not found. Trying PowerShell web server..." -ForegroundColor Yellow
+    # Fallback: Use PowerShell HttpListener
+    Write-Host "Python not available. Starting PowerShell web server..." -ForegroundColor Yellow
     
     try {
-        # Simple PowerShell HTTP server
         $listener = New-Object System.Net.HttpListener
+        $listener.Prefixes.Clear()
         $listener.Prefixes.Add("http://localhost:8000/")
         $listener.Start()
         

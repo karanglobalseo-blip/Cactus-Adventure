@@ -90,6 +90,8 @@ class Player {
     }
     
     updatePhysics(deltaTime) {
+        // Track previous Y for head-bump detection
+        this.prevY = this.y;
         if (!this.isPlanted) {
             // Apply gravity
             this.vy += this.game.gravity;
@@ -97,6 +99,12 @@ class Player {
             // Update position
             this.x += this.vx;
             this.y += this.vy;
+
+            // Enforce forward-only boundary
+            if (this.x < this.game.forwardBoundary) {
+                this.x = this.game.forwardBoundary;
+                if (this.vx < 0) this.vx = 0;
+            }
             
             // Ground collision
             const groundY = this.game.height - 80;
@@ -179,13 +187,12 @@ class Player {
     }
     
     eatFlower(type) {
-        if (type === 'special') {
-            // Special flower gives more growth and restores thorn
+        if (type === 'super') {
+            // Superflower increases size and restores more thorns
             this.grow(2);
             this.thorns = Math.min(this.thorns + 2, this.maxThorns);
         } else {
-            // Normal flower
-            this.grow(1);
+            // Normal flower does NOT grow size; small thorn restore remains
             this.thorns = Math.min(this.thorns + 1, this.maxThorns);
         }
     }
@@ -389,7 +396,7 @@ class Thorn {
         this.vy = 0;
         this.game = game;
         this.active = true;
-        this.lifetime = 2000; // 2 seconds
+        this.lifetime = 4000; // doubled lifetime for 100% more range
         this.timer = 0;
     }
     

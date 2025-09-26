@@ -10,17 +10,21 @@ class Game {
         this.state = 'menu'; // menu, playing, paused, gameOver
         this.score = 0;
         this.level = 1;
+        this.flowerCount = 0;
+        this.targetFlowers = 100;
         
         // Game objects
         this.player = null;
         this.enemies = [];
         this.flowers = [];
+        this.bricks = [];
         this.particles = [];
         this.thorns = [];
         
         // Environment
         this.environment = null;
         this.camera = { x: 0, y: 0 };
+        this.forwardBoundary = 0; // prevent backtracking
         
         // Timing
         this.lastTime = 0;
@@ -46,6 +50,8 @@ class Game {
         
         // Generate initial flowers
         this.generateFlowers();
+        // Generate bricks (Mario-style)
+        this.generateBricks();
         
         // Start game loop
         this.gameLoop();
@@ -127,20 +133,33 @@ class Game {
                 width: 20,
                 height: 20,
                 collected: false,
-                type: Math.random() > 0.8 ? 'special' : 'normal'
+                type: Math.random() > 0.8 ? 'super' : 'normal'
             });
         }
+    }
+
+    generateBricks() {
+        // Create some bricks at fixed positions above ground to be hit from below
+        this.bricks = [
+            { x: 350, y: this.height - 220, width: 40, height: 20, hit: false },
+            { x: 650, y: this.height - 260, width: 40, height: 20, hit: false },
+            { x: 980, y: this.height - 240, width: 40, height: 20, hit: false },
+            { x: 1300, y: this.height - 230, width: 40, height: 20, hit: false },
+        ];
     }
     
     generateEnemies() {
         this.enemies = [];
-        for (let i = 0; i < 5; i++) {
+        const positions = [
+            450, 900, 1250, 1600, 1950
+        ];
+        positions.forEach(px => {
             this.enemies.push(new Camel(
-                200 + i * 300,
+                px,
                 this.height - 120,
                 this
             ));
-        }
+        });
     }
     
     update(deltaTime) {
@@ -148,6 +167,12 @@ class Game {
         
         // Update game objects
         this.player.update(deltaTime);
+
+        // Update forward boundary (no backtracking)
+        this.forwardBoundary = Math.max(this.forwardBoundary, this.player.x - 50);
+
+        // Handle brick hits
+        this.handleBrickHits();
         
         // Update enemies
         this.enemies.forEach(enemy => {
@@ -182,8 +207,10 @@ class Game {
         this.flowers.forEach(flower => {
             if (!flower.collected && this.checkCollision(this.player, flower)) {
                 flower.collected = true;
+                // Only super flowers cause growth; normal flowers just count/score
                 this.player.eatFlower(flower.type);
-                this.score += flower.type === 'special' ? 20 : 10;
+                this.flowerCount += 1;
+                this.score += flower.type === 'super' ? 20 : 10;
                 
                 // Create particle effect
                 this.createParticles(flower.x, flower.y, '#ff69b4', 5);
@@ -232,6 +259,11 @@ class Game {
         
         // Keep camera within bounds
         this.camera.x = Math.max(0, Math.min(this.camera.x, this.width));
+
+        // Enforce forward-only boundary: don't allow camera (and thus player usability) to move backwards past boundary
+        if (this.player.x < this.forwardBoundary) {
+            this.player.x = this.forwardBoundary;
+        }
     }
     
     checkGameState() {
@@ -239,9 +271,8 @@ class Game {
             this.gameOver();
         }
         
-        // Check if all flowers collected
-        const remainingFlowers = this.flowers.filter(f => !f.collected).length;
-        if (remainingFlowers === 0) {
+        // Win when collected target number of flowers
+        if (this.flowerCount >= this.targetFlowers) {
             this.levelComplete();
         }
     }
@@ -284,6 +315,9 @@ class Game {
         
         // Render environment
         this.environment.render(this.ctx);
+
+        // Render bricks
+        this.renderBricks(this.ctx);
         
         // Render flowers
         this.flowers.forEach(flower => {
@@ -317,7 +351,8 @@ class Game {
     
     renderFlower(flower) {
         this.ctx.save();
-        this.ctx.fillStyle = flower.type === 'special' ? '#ff1493' : '#ff69b4';
+        // Superflower has distinct color
+        this.ctx.fillStyle = flower.type === 'super' ? '#ffd700' : '#ff69b4';
         
         // Draw flower petals
         const centerX = flower.x + flower.width / 2;
@@ -333,13 +368,65 @@ class Game {
             this.ctx.fill();
         }
         
-        // Draw center
-        this.ctx.fillStyle = '#ffff00';
+        // Draw center (superflower center slightly larger and glowing)
+        this.ctx.fillStyle = flower.type === 'super' ? '#ffa500' : '#ffff00';
         this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+        this.ctx.arc(centerX, centerY, flower.type === 'super' ? 6 : 4, 0, Math.PI * 2);
         this.ctx.fill();
         
+        if (flower.type === 'super') {
+            this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
+
         this.ctx.restore();
+    }
+
+    handleBrickHits() {
+        // Detect if player's head hits brick from below while moving upward
+        if (this.player.vy >= 0) return; // only when moving up
+        const head = { x: this.player.x, y: this.player.y, width: this.player.width, height: 5 };
+        this.bricks.forEach(brick => {
+            if (!brick.hit && this.checkCollision(head, brick) && (this.player.prevY + this.player.height) >= (brick.y + brick.height)) {
+                brick.hit = true;
+                brick.bumpTimer = 200;
+                // Spawn a flower above the brick
+                const type = Math.random() < 0.2 ? 'super' : 'normal';
+                this.flowers.push({
+                    x: brick.x + brick.width / 2 - 10,
+                    y: brick.y - 25,
+                    width: 20,
+                    height: 20,
+                    collected: false,
+                    type
+                });
+                this.createParticles(brick.x + brick.width / 2, brick.y, '#b5651d', 6);
+            }
+        });
+    }
+
+    renderBricks(ctx) {
+        this.bricks.forEach(brick => {
+            ctx.save();
+            const offsetY = brick.bumpTimer ? -4 * Math.sin((1 - brick.bumpTimer / 200) * Math.PI) : 0;
+            if (brick.bumpTimer) {
+                brick.bumpTimer -= this.deltaTime;
+                if (brick.bumpTimer < 0) brick.bumpTimer = 0;
+            }
+            ctx.fillStyle = brick.hit ? '#8b4513' : '#d2691e';
+            ctx.fillRect(brick.x, brick.y + offsetY, brick.width, brick.height);
+            // Draw brick pattern
+            ctx.strokeStyle = '#5a2e0c';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(brick.x, brick.y + offsetY + brick.height / 2);
+            ctx.lineTo(brick.x + brick.width, brick.y + offsetY + brick.height / 2);
+            ctx.stroke();
+            ctx.restore();
+        });
     }
     
     renderUI() {
@@ -348,6 +435,8 @@ class Game {
         document.getElementById('cactusSize').textContent = 
             this.player.size === 1 ? 'Small' : 
             this.player.size === 2 ? 'Medium' : 'Large';
+        const fc = document.getElementById('flowerCount');
+        if (fc) fc.textContent = `${this.flowerCount}/${this.targetFlowers}`;
         
         // Update health display
         const hearts = document.querySelectorAll('.heart');

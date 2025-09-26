@@ -18,9 +18,11 @@ class Camel {
         // AI State
         this.state = 'patrol'; // patrol, chase, stunned
         this.direction = Math.random() > 0.5 ? 1 : -1;
-        this.patrolDistance = 200;
+        this.patrolDistance = 120;
         this.startX = x;
-        this.chaseRange = 150;
+        this.homeX = x;
+        this.chaseRange = 180; // starts chasing when player enters this radius from camel
+        this.maxChaseDistance = 220; // camel won't go beyond this from homeX
         this.attackRange = 40;
         
         // Timers
@@ -115,6 +117,11 @@ class Camel {
             this.vy = -12 * this.game.speedFactor;
             this.isGrounded = false;
         }
+
+        // Do not chase beyond max distance from home
+        if (Math.abs(this.x - this.homeX) > this.maxChaseDistance) {
+            this.state = 'patrol';
+        }
     }
     
     updatePhysics(deltaTime) {
@@ -136,13 +143,15 @@ class Camel {
         }
         
         // Screen boundaries
-        if (this.x < 0) {
-            this.x = 0;
+        const minX = Math.max(0, this.homeX - this.maxChaseDistance);
+        const maxX = Math.min(this.game.width * 2 - this.width, this.homeX + this.maxChaseDistance);
+        if (this.x < minX) {
+            this.x = minX;
             this.direction = 1;
             this.facingRight = true;
         }
-        if (this.x + this.width > this.game.width * 2) {
-            this.x = this.game.width * 2 - this.width;
+        if (this.x + this.width > maxX) {
+            this.x = maxX - this.width;
             this.direction = -1;
             this.facingRight = false;
         }
@@ -397,29 +406,63 @@ class SandStorm {
         } else {
             // Draw actual storm
             ctx.globalAlpha = this.opacity;
-            
-            // Storm background
-            const gradient = ctx.createLinearGradient(this.x, 0, this.x + this.width, 0);
-            gradient.addColorStop(0, 'rgba(139, 69, 19, 0.8)');
-            gradient.addColorStop(0.5, 'rgba(160, 82, 45, 0.9)');
-            gradient.addColorStop(1, 'rgba(139, 69, 19, 0.8)');
-            
+
+            // Create a wavy-edged clipping path for the storm body
+            ctx.save();
+            ctx.beginPath();
+            const waveAmp = 10; // amplitude
+            const waveLen = 60; // wavelength
+            const t = (Date.now() / 200) % (Math.PI * 2);
+            // Top edge
+            ctx.moveTo(this.x, this.y);
+            for (let px = 0; px <= this.width; px += 10) {
+                const yOff = Math.sin((px / waveLen) + t) * waveAmp;
+                ctx.lineTo(this.x + px, this.y + yOff);
+            }
+            // Right edge
+            ctx.lineTo(this.x + this.width, this.y + this.height);
+            // Bottom edge (wavy)
+            for (let px = this.width; px >= 0; px -= 10) {
+                const yOff = Math.cos((px / waveLen) + t) * waveAmp;
+                ctx.lineTo(this.x + px, this.y + this.height - yOff);
+            }
+            // Left edge
+            ctx.closePath();
+            ctx.clip();
+
+            // Storm background gradient
+            const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.width, this.y + this.height);
+            gradient.addColorStop(0, 'rgba(150, 90, 40, 0.9)');
+            gradient.addColorStop(0.5, 'rgba(180, 120, 60, 0.85)');
+            gradient.addColorStop(1, 'rgba(150, 90, 40, 0.9)');
             ctx.fillStyle = gradient;
             ctx.fillRect(this.x, this.y, this.width, this.height);
-            
-            // Draw particles
+
+            // Add horizontal streaks for wind effect
+            ctx.globalAlpha = 0.2;
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 6; i++) {
+                const y = this.y + (i + 1) * (this.height / 7) + Math.sin(t + i) * 4;
+                ctx.fillRect(this.x, y, this.width, 2);
+            }
+            ctx.globalAlpha = this.opacity;
+
+            // Draw swirling particles
+            const centerX = this.x + this.width / 2;
+            const centerY = this.y + this.height / 2;
             this.particles.forEach(particle => {
+                // Swirl motion: offset by a small circular component
+                const angle = (particle.life * Math.PI * 2) + t * 2;
+                const swirlRadius = 6;
+                const px = this.x + particle.x + Math.cos(angle) * swirlRadius;
+                const py = this.y + particle.y + Math.sin(angle) * swirlRadius;
                 ctx.fillStyle = `rgba(139, 69, 19, ${0.8 - particle.life * 0.3})`;
                 ctx.beginPath();
-                ctx.arc(
-                    this.x + particle.x,
-                    this.y + particle.y,
-                    particle.size,
-                    0,
-                    Math.PI * 2
-                );
+                ctx.arc(px, py, particle.size, 0, Math.PI * 2);
                 ctx.fill();
             });
+
+            ctx.restore();
         }
         
         ctx.restore();

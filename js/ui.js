@@ -187,7 +187,7 @@ class UI {
     showCollectionMessage(type, points) {
         const messages = {
             'normal': `+${points} Flower collected!`,
-            'special': `+${points} Special flower! Bonus growth!`
+            'super': `+${points} Super flower! Size increased!`
         };
         
         this.showAlert(
