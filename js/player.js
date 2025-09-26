@@ -23,9 +23,9 @@ class Player {
         this.invulnerabilityTimer = 0;
         this.plantedTimer = 0;
         
-        // Movement
-        this.speed = 5;
-        this.jumpPower = 15;
+        // Movement (apply global speed factor)
+        this.speed = 5 * this.game.speedFactor;
+        this.jumpPower = 15 * this.game.speedFactor;
         
         // Animation
         this.animationFrame = 0;
@@ -72,19 +72,19 @@ class Player {
             this.vx *= game.friction;
         }
         
-        // Jump input
-        if ((game.keys['Space'] || game.keys['ArrowUp'] || game.keys['KeyW'] || game.touches['jump']) && this.isGrounded && !this.isPlanted) {
+        // Jump input (remove Space to free it for throwing)
+        if ((game.keys['ArrowUp'] || game.keys['KeyW'] || game.touches['jump']) && this.isGrounded && !this.isPlanted) {
             this.vy = -this.jumpPower;
             this.isGrounded = false;
         }
         
         // Thorn throwing
-        if ((game.keys['KeyX'] || game.touches['thorn']) && this.canThrowThorn()) {
+        if ((game.keys['KeyX'] || game.keys['Space'] || game.touches['thorn']) && this.canThrowThorn()) {
             this.throwThorn();
         }
         
         // Plant ability
-        if ((game.keys['KeyZ'] || game.touches['plant']) && this.isGrounded) {
+        if ((game.keys['KeyZ'] || game.keys['ControlLeft'] || game.keys['ControlRight'] || game.touches['plant']) && this.isGrounded) {
             this.togglePlant();
         }
     }
@@ -198,17 +198,17 @@ class Player {
             case 1:
                 this.width = 40;
                 this.height = 60;
-                this.speed = 5;
+                this.speed = 5 * this.game.speedFactor;
                 break;
             case 2:
                 this.width = 50;
                 this.height = 75;
-                this.speed = 4;
+                this.speed = 4 * this.game.speedFactor;
                 break;
             case 3:
                 this.width = 60;
                 this.height = 90;
-                this.speed = 3;
+                this.speed = 3 * this.game.speedFactor;
                 break;
         }
     }
@@ -385,7 +385,7 @@ class Thorn {
         this.y = y;
         this.width = 8;
         this.height = 4;
-        this.vx = direction * 12;
+        this.vx = direction * 12 * game.speedFactor;
         this.vy = 0;
         this.game = game;
         this.active = true;
@@ -406,7 +406,7 @@ class Thorn {
         this.y += this.vy;
         
         // Apply slight gravity
-        this.vy += 0.2;
+        this.vy += 0.2 * this.game.speedFactor;
         
         // Remove if off screen
         if (this.x < -50 || this.x > this.game.width * 2 + 50 || 

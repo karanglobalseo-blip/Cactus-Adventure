@@ -31,7 +31,9 @@ class Game {
         this.touches = {};
         
         // Game settings
-        this.gravity = 0.8;
+        // Global speed factor to slow the overall game speed by ~30%
+        this.speedFactor = 0.7;
+        this.gravity = 0.8 * this.speedFactor;
         this.friction = 0.85;
         
         this.init();
@@ -252,8 +254,19 @@ class Game {
     
     levelComplete() {
         this.state = 'levelComplete';
-        alert('Level Complete! Your cactus has grown strong!');
-        this.resetGame();
+        // Show UI overlay with replay option instead of alert
+        try {
+            const uiProvider = window.CactusQuest && typeof window.CactusQuest.ui === 'function' ? window.CactusQuest.ui() : null;
+            if (uiProvider && typeof uiProvider.showLevelComplete === 'function') {
+                uiProvider.showLevelComplete();
+            } else {
+                alert('Level Complete! Your cactus has grown strong!');
+                this.resetGame();
+            }
+        } catch (e) {
+            alert('Level Complete! Your cactus has grown strong!');
+            this.resetGame();
+        }
     }
     
     resetGame() {
@@ -371,7 +384,7 @@ class Particle {
     update(deltaTime) {
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += 0.3; // gravity
+        this.vy += 0.3 * (this.game ? this.game.speedFactor : 1); // gravity scaled
         this.life -= this.decay;
         
         if (this.life <= 0) {

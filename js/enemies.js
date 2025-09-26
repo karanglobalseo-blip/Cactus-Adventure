@@ -12,7 +12,7 @@ class Camel {
         // Stats
         this.health = 2;
         this.maxHealth = 2;
-        this.speed = 2;
+        this.speed = 2 * this.game.speedFactor;
         this.active = true;
         
         // AI State
@@ -112,7 +112,7 @@ class Camel {
         
         // Jump if player is above
         if (player.y < this.y - 20 && this.isGrounded && Math.abs(player.x - this.x) < 100) {
-            this.vy = -12;
+            this.vy = -12 * this.game.speedFactor;
             this.isGrounded = false;
         }
     }
@@ -162,8 +162,8 @@ class Camel {
         this.stunnedTimer = 1500; // 1.5 seconds
         
         // Knockback
-        this.vx = this.facingRight ? -5 : 5;
-        this.vy = -8;
+        this.vx = (this.facingRight ? -5 : 5) * this.game.speedFactor;
+        this.vy = -8 * this.game.speedFactor;
         
         if (this.health <= 0) {
             this.active = false;
@@ -290,7 +290,7 @@ class SandStorm {
         this.y = y;
         this.width = width;
         this.height = height;
-        this.vx = -2; // Moves left across screen
+        this.vx = -2 * this.game.speedFactor; // Moves left across screen
         this.active = true;
         this.damage = 1;
         
@@ -312,8 +312,8 @@ class SandStorm {
             this.particles.push({
                 x: Math.random() * this.width,
                 y: Math.random() * this.height,
-                vx: (Math.random() - 0.5) * 4,
-                vy: (Math.random() - 0.5) * 2,
+                vx: (Math.random() - 0.5) * 4 * this.game.speedFactor,
+                vy: (Math.random() - 0.5) * 2 * this.game.speedFactor,
                 size: Math.random() * 3 + 1,
                 life: Math.random()
             });
