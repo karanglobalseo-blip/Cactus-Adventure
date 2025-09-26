@@ -405,6 +405,16 @@ class SandStorm {
             }
         } else {
             // Draw actual storm
+            const stormImg = this.game.assets && this.game.assets.storm;
+            if (stormImg && stormImg.complete) {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                // Draw image scaled to storm bounds
+                ctx.drawImage(stormImg, this.x, this.y, this.width, this.height);
+                ctx.restore();
+                ctx.restore();
+                return;
+            }
             ctx.globalAlpha = this.opacity;
 
             // Create a wavy-edged clipping path for the storm body
