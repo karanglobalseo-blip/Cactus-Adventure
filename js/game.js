@@ -236,6 +236,7 @@ class Game {
                         camel.speed *= (1 + this.difficultyLevel * 0.1);
                     }
                     this.enemies.push(camel);
+                    console.log('Created camel at x:', fromX + 300 + i * 300, 'difficulty:', this.difficultyLevel);
                 } catch (e) {
                     console.warn('Failed to create camel:', e);
                 }
@@ -255,12 +256,13 @@ class Game {
             if (chunkId % stormFreq === 1) {
                 try {
                     const stormX = fromX + Math.random() * (toX - fromX - 200);
-                    const storm = new SandStorm(stormX, 0, this.height, this);
+                    const storm = new SandStorm(stormX, 0, 150, this.height, this);
                     // Increase storm speed with difficulty
                     if (storm.vx !== undefined) {
                         storm.vx *= (1 + this.difficultyLevel * 0.15);
                     }
                     this.environment.sandStorms.push(storm);
+                    console.log('Created sandstorm at x:', stormX, 'difficulty:', this.difficultyLevel);
                 } catch (e) {
                     console.warn('Failed to create sandstorm:', e);
                 }
@@ -370,6 +372,7 @@ class Game {
         if (this.player.x > this.worldWidth - this.width * 2) {
             const oldWidth = this.worldWidth;
             this.worldWidth += this.width * 5; // extend by 5 screens
+            console.log('Extending world from', oldWidth, 'to', this.worldWidth, 'at player x:', this.player.x);
             this.generateMoreContent(oldWidth, this.worldWidth);
             
             // Clean up old objects that are far behind the player
@@ -487,6 +490,13 @@ class Game {
         }
     }
     
+    debugEnemyStatus() {
+        const activeEnemies = this.enemies.filter(e => e.active).length;
+        const playerX = Math.round(this.player.x);
+        const worldWidth = Math.round(this.worldWidth);
+        console.log(`Player at ${playerX}, World: ${worldWidth}, Active enemies: ${activeEnemies}, Total enemies: ${this.enemies.length}, Difficulty: ${this.difficultyLevel}`);
+    }
+    
     cleanupOldObjects() {
         const cleanupDistance = this.player.x - this.width * 3;
         
@@ -511,7 +521,8 @@ class Game {
             flowers: this.flowers.length,
             enemies: this.enemies.length,
             particles: this.particles.length,
-            bricks: this.bricks.length
+            bricks: this.bricks.length,
+            sandStorms: this.environment.sandStorms ? this.environment.sandStorms.length : 0
         });
     }
     
@@ -744,6 +755,7 @@ class Game {
             // Performance monitoring
             if (this.frameCount % 300 === 0) { // Every 5 seconds at 60fps
                 this.performanceCheck();
+                this.debugEnemyStatus();
             }
             this.frameCount = (this.frameCount || 0) + 1;
             
