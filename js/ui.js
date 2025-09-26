@@ -287,6 +287,80 @@ class UI {
         document.getElementById('gameContainer').appendChild(completeDiv);
     }
     
+    // Settings overlay listing key bindings and touch hints
+    showSettings() {
+        const existing = document.getElementById('settingsOverlay');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'settingsOverlay';
+        overlay.style.cssText = `
+            position: absolute; inset: 0; background: rgba(0,0,0,0.75);
+            display:flex; align-items:center; justify-content:center; z-index:120; color:#fff;`;
+        const panel = document.createElement('div');
+        panel.style.cssText = `background:#111827; padding:24px; border-radius:12px; width:min(560px,90%);
+            font-family: system-ui, Arial, sans-serif; line-height:1.6;`;
+        panel.innerHTML = `
+            <h2 style="margin-top:0;">Settings & Controls</h2>
+            <div>
+                <strong>Move</strong>: Arrow Left/Right or A/D (mobile: hold left/right half of screen)
+                <br>
+                <strong>Jump</strong>: Arrow Up or W (mobile: swipe up)
+                <br>
+                <strong>Throw Thorn</strong>: Space or X (mobile: 🌵 button)
+                <br>
+                <strong>Plant Power</strong>: Ctrl or Z (mobile: 🌱 button)
+                <br>
+                <strong>Pause</strong>: Esc
+            </div>
+            <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+                <button id="closeSettingsBtn" style="padding:8px 14px; border:none; border-radius:8px;">Close</button>
+            </div>`;
+        overlay.appendChild(panel);
+        document.getElementById('gameContainer').appendChild(overlay);
+        panel.querySelector('#closeSettingsBtn').addEventListener('click', () => overlay.remove());
+    }
+
+    // Pause overlay with resume/restart and top 3 scores (from localStorage)
+    showPauseMenu(score, top3 = []) {
+        const existing = document.getElementById('pauseOverlay');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'pauseOverlay';
+        overlay.style.cssText = `
+            position:absolute; inset:0; background: rgba(0,0,0,0.7);
+            display:flex; align-items:center; justify-content:center; z-index:130; color:#fff;`;
+        const panel = document.createElement('div');
+        panel.style.cssText = `background:#0b1220; padding:24px; border-radius:12px; width:min(520px,90%);
+            font-family: system-ui, Arial, sans-serif;`;
+        const list = (top3 || []).slice(0,3).map((s,i)=>`<div>#${i+1}: ${s}</div>`).join('') || '<div>No scores yet</div>';
+        panel.innerHTML = `
+            <h2 style="margin-top:0;">Paused</h2>
+            <div style="opacity:0.9; margin-bottom:10px;">Score: ${score}</div>
+            <div style="background:#111827; padding:12px; border-radius:8px; margin-bottom:12px;">
+                <div style="font-weight:600; margin-bottom:6px;">Top 3 Scores</div>
+                ${list}
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button id="resumeBtn" style="padding:10px 16px; border:none; border-radius:8px; background:#10b981; color:#fff;">Resume</button>
+                <button id="restartBtn" style="padding:10px 16px; border:none; border-radius:8px; background:#3b82f6; color:#fff;">Restart</button>
+            </div>`;
+        overlay.appendChild(panel);
+        document.getElementById('gameContainer').appendChild(overlay);
+        panel.querySelector('#resumeBtn').addEventListener('click', () => {
+            this.game.resumeGame();
+            overlay.remove();
+        });
+        panel.querySelector('#restartBtn').addEventListener('click', () => {
+            try { this.game.recordScore(this.game.score); } catch(_) {}
+            location.reload();
+        });
+    }
+
+    hidePauseMenu() {
+        const el = document.getElementById('pauseOverlay');
+        if (el) el.remove();
+    }
+    
     render(ctx) {
         // Render floating notifications
         this.notifications.forEach(notification => {

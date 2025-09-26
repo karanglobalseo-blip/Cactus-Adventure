@@ -14,6 +14,7 @@ class Game {
         this.level = 1;
         this.flowerCount = 0;
         this.targetFlowers = 100;
+        this.maxProgressX = 0; // furthest player has reached
         
         // Game objects
         this.player = null;
@@ -35,6 +36,8 @@ class Game {
         // Input handling
         this.keys = {};
         this.touches = {};
+        this.touchMoveDir = 0; // -1 left, 1 right, 0 none
+        this.touchJumpQueued = false;
         
         // Game settings
         // Global speed factor to slow the overall game speed by ~30%
@@ -64,6 +67,13 @@ class Game {
         document.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             e.preventDefault();
+            if (e.code === 'Escape') {
+                if (this.state === 'playing') {
+                    this.pauseGame();
+                } else if (this.state === 'paused') {
+                    this.resumeGame();
+                }
+            }
         });
         
         document.addEventListener('keyup', (e) => {
@@ -71,22 +81,42 @@ class Game {
             e.preventDefault();
         });
         
-        // Touch/Mouse events for mobile controls
-        const leftBtn = document.getElementById('leftBtn');
-        const rightBtn = document.getElementById('rightBtn');
-        const jumpBtn = document.getElementById('jumpBtn');
+        // Touch controls (invisible screen zones for movement, swipe up to jump)
+        const canvas = this.canvas;
+        let touchStartY = 0;
+        let touchStartX = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            const t = e.touches[0];
+            touchStartX = t.clientX; touchStartY = t.clientY;
+            // left/right half controls movement
+            const rect = canvas.getBoundingClientRect();
+            const x = t.clientX - rect.left;
+            this.touchMoveDir = x < rect.width / 2 ? -1 : 1;
+        }, {passive: false});
+        canvas.addEventListener('touchmove', (e) => {
+            // detect upward swipe for jump
+            const t = e.touches[0];
+            if (touchStartY - t.clientY > 40) this.touchJumpQueued = true;
+        }, {passive: false});
+        canvas.addEventListener('touchend', (e) => {
+            this.touchMoveDir = 0;
+        }, {passive: false});
+        
         const thornBtn = document.getElementById('thornBtn');
         const plantBtn = document.getElementById('plantBtn');
         const startBtn = document.getElementById('startBtn');
         
-        // Touch events for buttons
-        this.addTouchEvents(leftBtn, 'left');
-        this.addTouchEvents(rightBtn, 'right');
-        this.addTouchEvents(jumpBtn, 'jump');
+        // Touch events for power buttons only (movement handled by screen zones)
         this.addTouchEvents(thornBtn, 'thorn');
         this.addTouchEvents(plantBtn, 'plant');
         
         startBtn.addEventListener('click', () => this.startGame());
+
+        // Settings button
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) settingsBtn.addEventListener('click', () => {
+            try { window.CactusQuest.ui().showSettings(); } catch (_) {}
+        });
     }
     
     addTouchEvents(element, action) {
@@ -149,6 +179,34 @@ class Game {
             { x: 1300, y: this.height - 230, width: 40, height: 20, hit: false },
         ];
     }
+
+    generateMoreContent(fromX, toX) {
+        // Additional flowers
+        for (let i = 0; i < 20; i++) {
+            this.flowers.push({
+                x: fromX + Math.random() * (toX - fromX),
+                y: this.height - 100 - Math.random() * 200,
+                width: 20,
+                height: 20,
+                collected: false,
+                type: Math.random() > 0.85 ? 'super' : 'normal'
+            });
+        }
+        // Additional bricks
+        for (let i = 0; i < 6; i++) {
+            this.bricks.push({
+                x: fromX + 200 + i * 180 + Math.random() * 120,
+                y: this.height - 220 - Math.random() * 60,
+                width: 40,
+                height: 20,
+                hit: false
+            });
+        }
+        // Additional camels
+        for (let i = 0; i < 3; i++) {
+            this.enemies.push(new Camel(fromX + 300 + i * 400, this.height - 120, this));
+        }
+    }
     
     generateEnemies() {
         this.enemies = [];
@@ -168,10 +226,21 @@ class Game {
         if (this.state !== 'playing') return;
         
         // Update game objects
+        // Apply touch movement and jump intents
+        if (this.touchMoveDir !== 0) {
+            if (this.touchMoveDir < 0) this.keys['ArrowLeft'] = true; else this.keys['ArrowRight'] = true;
+        } else {
+            this.keys['ArrowLeft'] = false; this.keys['ArrowRight'] = false;
+        }
+        if (this.touchJumpQueued) { this.keys['ArrowUp'] = true; this.touchJumpQueued = false; }
+        else { this.keys['ArrowUp'] = false; }
+
         this.player.update(deltaTime);
 
         // Update forward boundary (no backtracking)
-        this.forwardBoundary = Math.max(this.forwardBoundary, this.player.x - 50);
+        // Allow backtracking within current viewport only
+        this.maxProgressX = Math.max(this.maxProgressX, this.player.x);
+        this.forwardBoundary = Math.max(0, this.maxProgressX - this.width);
 
         // Handle brick hits
         this.handleBrickHits();
@@ -190,20 +259,38 @@ class Game {
         // Update particles
         this.particles.forEach(particle => particle.update(deltaTime));
         this.particles = this.particles.filter(particle => particle.active);
-        
+
+        // Update flower physics (jump/fall for dynamic flowers)
+        this.flowers.forEach(f => {
+            if (!f.collected && f.dynamic) {
+                f.vy += this.gravity * 0.6; // lighter gravity
+                f.y += f.vy;
+                // ground collision
+                const groundY = this.height - 80 - f.height;
+                if (f.y > groundY) { f.y = groundY; f.vy = 0; f.dynamic = false; }
+            }
+        });
+
         // Update environment
         this.environment.update(deltaTime);
-        
+
         // Check collisions
         this.checkCollisions();
-        
+
         // Update camera to follow player
         this.updateCamera();
+
+        // Infinite world extension
+        if (this.player.x > this.worldWidth - this.width * 2) {
+            const oldWidth = this.worldWidth;
+            this.worldWidth += this.width * 5; // extend by 5 screens
+            this.generateMoreContent(oldWidth, this.worldWidth);
+        }
         
         // Check win/lose conditions
         this.checkGameState();
     }
-    
+
     checkCollisions() {
         // Player vs Flowers
         this.flowers.forEach(flower => {
@@ -284,6 +371,29 @@ class Game {
         this.state = 'gameOver';
         alert('Game Over! Your cactus couldn\'t survive the desert.');
         this.resetGame();
+    }
+
+    pauseGame() {
+        this.state = 'paused';
+        try { window.CactusQuest.ui().showPauseMenu(this.score, this.getTopScores()); } catch (_) {}
+    }
+
+    resumeGame() {
+        this.state = 'playing';
+        try { window.CactusQuest.ui().hidePauseMenu(); } catch (_) {}
+    }
+
+    getTopScores() {
+        const raw = localStorage.getItem('cq_scores') || '[]';
+        return JSON.parse(raw).slice(0,3);
+    }
+
+    recordScore(score) {
+        const raw = localStorage.getItem('cq_scores') || '[]';
+        const arr = JSON.parse(raw);
+        arr.push(score);
+        arr.sort((a,b)=>b-a);
+        localStorage.setItem('cq_scores', JSON.stringify(arr.slice(0,10)));
     }
     
     levelComplete() {
@@ -404,7 +514,9 @@ class Game {
                     width: 20,
                     height: 20,
                     collected: false,
-                    type
+                    type,
+                    dynamic: true,
+                    vy: -8 * this.speedFactor
                 });
                 this.createParticles(brick.x + brick.width / 2, brick.y, '#b5651d', 6);
             }
