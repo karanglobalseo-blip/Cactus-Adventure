@@ -116,13 +116,13 @@ class Player {
                 this.isGrounded = false;
             }
             
-            // Screen boundaries
+            // Screen/world boundaries
             if (this.x < 0) {
                 this.x = 0;
                 this.vx = 0;
             }
-            if (this.x + this.width > this.game.width * 2) {
-                this.x = this.game.width * 2 - this.width;
+            if (this.x + this.width > this.game.worldWidth) {
+                this.x = this.game.worldWidth - this.width;
                 this.vx = 0;
             }
         }
@@ -260,98 +260,157 @@ class Player {
     drawCactus(ctx) {
         const centerX = this.x + this.width / 2;
         const bottomY = this.y + this.height;
-        
-        // Main body (green cylinder)
-        ctx.fillStyle = '#228B22';
-        ctx.fillRect(
-            centerX - this.width * 0.3,
-            this.y,
-            this.width * 0.6,
-            this.height
-        );
-        
-        // Arms (if medium or large)
-        if (this.size >= 2) {
-            // Left arm
-            ctx.fillRect(
-                centerX - this.width * 0.6,
-                this.y + this.height * 0.3,
-                this.width * 0.3,
-                this.height * 0.4
-            );
-            
-            // Right arm
-            ctx.fillRect(
-                centerX + this.width * 0.3,
-                this.y + this.height * 0.3,
-                this.width * 0.3,
-                this.height * 0.4
-            );
-        }
-        
-        // Extra segments for large cactus
-        if (this.size >= 3) {
-            ctx.fillRect(
-                centerX - this.width * 0.25,
-                this.y - 15,
-                this.width * 0.5,
-                20
-            );
-        }
-        
-        // Spines
-        ctx.strokeStyle = '#8B4513';
+
+        // Terracotta pot (visual only; does not affect hitbox)
+        const potH = Math.max(10, this.height * 0.22);
+        const potTopY = bottomY - potH * 0.9;
+        ctx.fillStyle = '#E1864B';
+        ctx.strokeStyle = '#5A2E0C';
         ctx.lineWidth = 2;
-        
-        for (let i = 0; i < this.height; i += 15) {
-            // Left spines
+        // Pot body
+        ctx.beginPath();
+        ctx.moveTo(centerX - this.width * 0.45, bottomY);
+        ctx.lineTo(centerX + this.width * 0.45, bottomY);
+        ctx.lineTo(centerX + this.width * 0.38, potTopY);
+        ctx.lineTo(centerX - this.width * 0.38, potTopY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Pot rim
+        ctx.fillStyle = '#D3763E';
+        const rimH = potH * 0.28;
+        ctx.fillRect(centerX - this.width * 0.44, potTopY - rimH, this.width * 0.88, rimH);
+        ctx.strokeRect(centerX - this.width * 0.44, potTopY - rimH, this.width * 0.88, rimH);
+
+        // Main cactus body (rounded capsule)
+        const bodyW = this.width * 0.55;
+        const bodyH = this.height - potH * 0.9;
+        const bodyX = centerX - bodyW / 2;
+        const bodyY = this.y + Math.max(0, (this.height - potH) * 0.02);
+        const radius = Math.min(bodyW, bodyH) * 0.28;
+        ctx.fillStyle = '#47A04A';
+        ctx.strokeStyle = '#1F5A20';
+        ctx.lineWidth = 3;
+        // Rounded rect
+        ctx.beginPath();
+        ctx.moveTo(bodyX + radius, bodyY);
+        ctx.lineTo(bodyX + bodyW - radius, bodyY);
+        ctx.quadraticCurveTo(bodyX + bodyW, bodyY, bodyX + bodyW, bodyY + radius);
+        ctx.lineTo(bodyX + bodyW, bodyY + bodyH - radius);
+        ctx.quadraticCurveTo(bodyX + bodyW, bodyY + bodyH, bodyX + bodyW - radius, bodyY + bodyH);
+        ctx.lineTo(bodyX + radius, bodyY + bodyH);
+        ctx.quadraticCurveTo(bodyX, bodyY + bodyH, bodyX, bodyY + bodyH - radius);
+        ctx.lineTo(bodyX, bodyY + radius);
+        ctx.quadraticCurveTo(bodyX, bodyY, bodyX + radius, bodyY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Vertical segments (light/dark halves)
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(centerX, bodyY + 6, 2, bodyH - 12);
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.fillRect(centerX + bodyW * 0.18, bodyY + 6, 2, bodyH - 12);
+        ctx.fillRect(centerX - bodyW * 0.18, bodyY + 6, 2, bodyH - 12);
+
+        // Arms (rounded) for size >= 2
+        if (this.size >= 2) {
+            ctx.fillStyle = '#47A04A';
+            ctx.strokeStyle = '#1F5A20';
+            // Left arm
+            const laX = bodyX - bodyW * 0.25;
+            const laY = bodyY + bodyH * 0.35;
+            const laW = bodyW * 0.28;
+            const laH = bodyH * 0.38;
             ctx.beginPath();
-            ctx.moveTo(centerX - this.width * 0.3, this.y + i);
-            ctx.lineTo(centerX - this.width * 0.4, this.y + i);
+            ctx.moveTo(laX + laW * 0.2, laY);
+            ctx.quadraticCurveTo(laX, laY + laH * 0.25, laX + laW * 0.2, laY + laH);
+            ctx.lineTo(laX + laW * 0.6, laY + laH);
+            ctx.quadraticCurveTo(laX + laW * 0.8, laY + laH * 0.25, laX + laW * 0.6, laY);
+            ctx.closePath();
+            ctx.fill();
             ctx.stroke();
-            
-            // Right spines
+            // Right arm
+            const raX = bodyX + bodyW;
+            const raY = laY;
+            const raW = laW;
+            const raH = laH;
             ctx.beginPath();
-            ctx.moveTo(centerX + this.width * 0.3, this.y + i);
-            ctx.lineTo(centerX + this.width * 0.4, this.y + i);
+            ctx.moveTo(raX + raW * 0.4, raY);
+            ctx.quadraticCurveTo(raX + raW, raY + raH * 0.25, raX + raW * 0.4, raY + raH);
+            ctx.lineTo(raX, raY + raH);
+            ctx.quadraticCurveTo(raX - raW * 0.2, raY + raH * 0.25, raX, raY);
+            ctx.closePath();
+            ctx.fill();
             ctx.stroke();
         }
-        
-        // Face
+
+        // Small spines
+        ctx.strokeStyle = '#35612F';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < bodyH - 10; i += 14) {
+            ctx.beginPath();
+            ctx.moveTo(bodyX + 6, bodyY + 6 + i);
+            ctx.lineTo(bodyX, bodyY + 6 + i);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(bodyX + bodyW - 6, bodyY + 13 + i);
+            ctx.lineTo(bodyX + bodyW, bodyY + 13 + i);
+            ctx.stroke();
+        }
+
+        // Face (kawaii)
+        const eyeY = bodyY + bodyH * 0.35;
         ctx.fillStyle = '#000000';
-        
         // Eyes
-        const eyeY = this.y + this.height * 0.25;
         ctx.beginPath();
-        ctx.arc(centerX - 8, eyeY, 3, 0, Math.PI * 2);
+        ctx.arc(centerX - 8, eyeY, 4, 0, Math.PI * 2);
         ctx.fill();
-        
         ctx.beginPath();
-        ctx.arc(centerX + 8, eyeY, 3, 0, Math.PI * 2);
+        ctx.arc(centerX + 8, eyeY, 4, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Mouth (changes based on health)
+        // Eye shines
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(centerX - 9, eyeY - 1, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 7, eyeY - 1, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        // Cheeks
+        ctx.fillStyle = '#FF9BB0';
+        ctx.beginPath();
+        ctx.arc(centerX - 15, eyeY + 6, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(centerX + 15, eyeY + 6, 3, 0, Math.PI * 2);
+        ctx.fill();
+        // Mouth (happy when health>1)
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
+        const mouthY = bodyY + bodyH * 0.48;
         ctx.beginPath();
-        
-        const mouthY = this.y + this.height * 0.4;
         if (this.health > 1) {
-            // Happy mouth
-            ctx.arc(centerX, mouthY, 8, 0, Math.PI);
+            ctx.arc(centerX, mouthY, 7, 0, Math.PI);
         } else {
-            // Sad mouth
-            ctx.arc(centerX, mouthY + 10, 8, Math.PI, 0);
+            ctx.arc(centerX, mouthY + 8, 7, Math.PI, 0);
         }
         ctx.stroke();
-        
-        // Flower on top (if large)
-        if (this.size >= 3) {
-            ctx.fillStyle = '#FF69B4';
+
+        // Top flower accent
+        ctx.fillStyle = '#FFC83D';
+        const fx = centerX;
+        const fy = bodyY - 6;
+        for (let i = 0; i < 6; i++) {
+            const ang = (i / 6) * Math.PI * 2;
             ctx.beginPath();
-            ctx.arc(centerX, this.y - 5, 8, 0, Math.PI * 2);
+            ctx.arc(fx + Math.cos(ang) * 7, fy + Math.sin(ang) * 7, 4, 0, Math.PI * 2);
             ctx.fill();
         }
+        ctx.fillStyle = '#F79F00';
+        ctx.beginPath();
+        ctx.arc(fx, fy, 3, 0, Math.PI * 2);
+        ctx.fill();
     }
     
     drawPlantedEffect(ctx) {

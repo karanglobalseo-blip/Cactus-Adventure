@@ -48,7 +48,7 @@ class Environment {
         for (let i = 0; i < 10; i++) {
             this.backgroundElements.push({
                 type: 'cactus',
-                x: Math.random() * this.game.width * 2,
+                x: Math.random() * this.game.worldWidth,
                 y: this.game.height - 120 - Math.random() * 50,
                 width: 20 + Math.random() * 15,
                 height: 40 + Math.random() * 30,
@@ -60,7 +60,7 @@ class Environment {
         for (let i = 0; i < 15; i++) {
             this.backgroundElements.push({
                 type: 'rock',
-                x: Math.random() * this.game.width * 2,
+                x: Math.random() * this.game.worldWidth,
                 y: this.game.height - 100 - Math.random() * 20,
                 width: 15 + Math.random() * 25,
                 height: 10 + Math.random() * 15,
@@ -72,7 +72,7 @@ class Environment {
         for (let i = 0; i < 8; i++) {
             this.backgroundElements.push({
                 type: 'plant',
-                x: Math.random() * this.game.width * 2,
+                x: Math.random() * this.game.worldWidth,
                 y: this.game.height - 90 - Math.random() * 10,
                 width: 10 + Math.random() * 10,
                 height: 8 + Math.random() * 12,
@@ -161,7 +161,7 @@ class Environment {
         skyGradient.addColorStop(1, '#DAA520');
         
         ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, this.game.width * 2, this.game.height * 0.7);
+        ctx.fillRect(0, 0, this.game.worldWidth, this.game.height * 0.7);
         
         // Ground
         const groundGradient = ctx.createLinearGradient(0, this.game.height * 0.7, 0, this.game.height);
@@ -169,7 +169,7 @@ class Environment {
         groundGradient.addColorStop(1, '#CD853F');
         
         ctx.fillStyle = groundGradient;
-        ctx.fillRect(0, this.game.height * 0.7, this.game.width * 2, this.game.height * 0.3);
+        ctx.fillRect(0, this.game.height * 0.7, this.game.worldWidth, this.game.height * 0.3);
         
         // Clouds
         this.renderClouds(ctx);
@@ -211,7 +211,7 @@ class Environment {
         
         // Animated clouds
         for (let i = 0; i < 4; i++) {
-            const x = (i * 200 + this.cloudOffset) % (this.game.width * 2 + 100) - 50;
+            const x = (i * 200 + this.cloudOffset) % (this.game.worldWidth + 100) - 50;
             const y = 60 + i * 20;
             
             // Cloud shape made of circles
@@ -229,7 +229,7 @@ class Environment {
         
         // Animated sand dunes in background
         for (let i = 0; i < 6; i++) {
-            const x = (i * 150 + this.sandDuneOffset) % (this.game.width * 2 + 100) - 50;
+            const x = (i * 150 + this.sandDuneOffset) % (this.game.worldWidth + 100) - 50;
             const y = this.game.height - 150;
             const width = 100 + Math.sin(i) * 20;
             const height = 30 + Math.cos(i) * 10;

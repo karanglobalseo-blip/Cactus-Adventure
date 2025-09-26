@@ -5,6 +5,8 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.width = this.canvas.width;
         this.height = this.canvas.height;
+        // World dimensions (increase travel distance)
+        this.worldWidth = this.width * 4; // previously ~2x; now 4x to increase range
         
         // Game state
         this.state = 'menu'; // menu, playing, paused, gameOver
@@ -128,7 +130,7 @@ class Game {
         this.flowers = [];
         for (let i = 0; i < 15; i++) {
             this.flowers.push({
-                x: Math.random() * (this.width * 2),
+                x: Math.random() * this.worldWidth,
                 y: this.height - 100 - Math.random() * 200,
                 width: 20,
                 height: 20,
@@ -257,8 +259,9 @@ class Game {
         const targetX = this.player.x - this.width / 2;
         this.camera.x += (targetX - this.camera.x) * 0.1;
         
-        // Keep camera within bounds
-        this.camera.x = Math.max(0, Math.min(this.camera.x, this.width));
+        // Keep camera within bounds of the world
+        const maxCamX = Math.max(0, this.worldWidth - this.width);
+        this.camera.x = Math.max(0, Math.min(this.camera.x, maxCamX));
 
         // Enforce forward-only boundary: don't allow camera (and thus player usability) to move backwards past boundary
         if (this.player.x < this.forwardBoundary) {
